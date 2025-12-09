@@ -99,7 +99,7 @@
             </header>
 
             <!-- Dashboard Section -->
-            <section id="dashboard-section" class="page-section p-6 h-full overflow-y-auto">
+            <section id="dashboard-section" class="page-section p-6 h-full overflow-y-auto pb-32">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                      <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                         <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mb-3">
@@ -125,14 +125,32 @@
                             Open POS
                         </button>
                     </div>
-                    <!-- Decorative circles -->
                     <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
                     <div class="absolute right-20 -top-10 w-20 h-20 bg-white opacity-10 rounded-full blur-xl"></div>
+                </div>
+
+                <!-- Admin Quick Actions -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Admin Actions</h3>
+                    <div class="flex gap-4 overflow-x-auto hide-scrollbar">
+                        <button onclick="app.navTo('dishes')" class="flex-shrink-0 bg-white p-4 w-40 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center gap-2 hover:border-orange-500 transition text-gray-700 font-medium">
+                            <div class="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+                                <ion-icon name="add-circle-outline" class="text-2xl"></ion-icon>
+                            </div>
+                            <span class="text-sm">Manage Items</span>
+                        </button>
+                         <button onclick="app.navTo('history')" class="flex-shrink-0 bg-white p-4 w-40 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center gap-2 hover:border-orange-500 transition text-gray-700 font-medium">
+                            <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+                                <ion-icon name="time-outline" class="text-2xl"></ion-icon>
+                            </div>
+                            <span class="text-sm">View History</span>
+                        </button>
+                    </div>
                 </div>
             </section>
 
             <!-- Billing / POS Section -->
-            <section id="billing-section" class="page-section hidden h-full flex flex-col md:flex-row">
+            <section id="billing-section" class="page-section hidden h-full flex flex-col md:flex-row pb-20 md:pb-0">
                 <!-- Left: Menu Grid -->
                 <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200">
                     <!-- Search & Filter -->
@@ -190,16 +208,69 @@
                     <!-- History Items -->
                 </div>
             </section>
-             <section id="dishes-section" class="page-section hidden p-6 h-full overflow-y-auto">
-                <div class="space-y-4" id="dishes-list">
-                    <!-- History Items -->
+             <!-- Dishes Management Section -->
+             <section id="dishes-section" class="page-section hidden p-6 h-full overflow-y-auto pb-32">
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-2xl font-bold text-gray-800">Menu Management</h3>
+                    </div>
+
+                    <!-- Add Form -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h4 class="text-sm font-bold text-orange-600 uppercase mb-4 tracking-wider">Add / Edit Item</h4>
+                        <form id="dish-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Item Name</label>
+                                <input type="text" id="dish-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition" placeholder="e.g. Bhel Puri">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Code</label>
+                                <input type="text" id="dish-code" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition" placeholder="e.g. 101">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Price (₹)</label>
+                                <input type="number" id="dish-price" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition" placeholder="0.00">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Category</label>
+                                <input type="text" id="dish-type" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition" list="cat-suggestions" placeholder="Chaat">
+                                <datalist id="cat-suggestions">
+                                    <option value="Chaat">
+                                    <option value="Beverages">
+                                    <option value="Snacks">
+                                </datalist>
+                            </div>
+                            <div class="md:col-span-2 space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Image URL (Optional)</label>
+                                <input type="url" id="dish-image" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition" placeholder="https://...">
+                            </div>
+                            <div class="md:col-span-2 pt-2">
+                                <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl shadow-lg transition flex justify-center items-center gap-2">
+                                    <ion-icon name="save-outline" class="text-lg"></ion-icon> Save Item
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-bold text-gray-800">Current Items</h4>
+                        <div id="dishes-list-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
         </main>
     </div>
 
-    <!-- Scripts -->
-    <script src="script.js"></script>
+    <!-- Scripts with Cache Busting -->
+    <script>
+        // Force latest version of script
+        const script = document.createElement('script');
+        script.src = 'script.js?v=' + new Date().getTime();
+        document.body.appendChild(script);
+    </script>
 </body>
 </html>
