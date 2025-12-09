@@ -168,7 +168,7 @@
             <!-- Billing / POS Section -->
             <section id="billing-section" class="page-section hidden h-full flex flex-col md:flex-row">
                 <!-- Left: Menu Grid -->
-                <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200">
+                <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200 billing-menu">
                     <!-- Search & Filter -->
                     <div class="p-6 bg-white border-b border-gray-200 space-y-4">
                         <div class="relative">
@@ -189,7 +189,7 @@
                 </div>
 
                 <!-- Right: Current Bill -->
-                <div class="w-full md:w-96 bg-white flex flex-col h-full max-h-[80vh] md:h-full shadow-xl z-20" style="min-height:320px;">
+                <div id="current-bill-panel" class="current-bill-panel w-full md:w-96 bg-white flex flex-col h-full max-h-[80vh] md:h-full shadow-xl z-20" style="min-height:320px;">
                     <div class="p-4 border-b border-gray-200 bg-gray-50">
                         <h3 class="font-bold text-gray-800">Current Order</h3>
                         <p class="text-xs text-gray-500" id="bill-date">--</p>
