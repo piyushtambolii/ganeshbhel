@@ -22,9 +22,7 @@
       nomodule
       src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
     ></script>
-    <!-- PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- PDF libraries removed — printing is direct to thermal printer -->
   </head>
   <body>
     <!-- App Container -->
@@ -192,44 +190,49 @@
             <div class="glass-card form-card">
               <h3>Add New Dish</h3>
               <form id="dish-form">
-                <input
-                  type="text"
-                  id="dish-name"
-                  placeholder="Dish Name (e.g., Bhel Puri)"
-                  required
-                />
-                <input
-                  type="number"
-                  id="dish-price"
-                  placeholder="Price"
-                  required
-                />
-                <div class="ingredients-area">
-                  <h4>Ingredients (Stock Deduction)</h4>
-                  <div id="ingredients-inputs">
-                    <!-- Dynamic ingredient rows -->
-                    <div class="ingredient-row">
-                      <select class="inv-select" required>
-                        <option>Loading...</option>
-                      </select>
-                      <input
-                        type="number"
-                        class="ing-qty"
-                        placeholder="Qty"
-                        step="0.01"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    id="add-ingredient-btn"
-                    class="btn-text"
-                  >
-                    + Add Ingredient
-                  </button>
+                <div class="row">
+                  <input
+                    type="text"
+                    id="dish-name"
+                    placeholder="Dish Name (e.g., Bhel Puri)"
+                    required
+                  />
+                  <input
+                    type="text"
+                    id="dish-code"
+                    placeholder="Item Code (e.g., 101)"
+                    required
+                  />
                 </div>
-                <button type="submit" class="btn-primary">Save Dish</button>
+                <div class="row">
+                  <input
+                    type="number"
+                    id="dish-price"
+                    placeholder="Price (₹)"
+                    required
+                  />
+                  <input
+                    type="text"
+                    id="dish-type"
+                    placeholder="Type (e.g., Chaat, Beverages)"
+                    required
+                    list="type-suggestions"
+                  />
+                  <datalist id="type-suggestions">
+                    <option value="Chaat"></option>
+                    <option value="Beverages"></option>
+                    <option value="Snacks"></option>
+                  </datalist>
+                </div>
+                 <div class="row">
+                    <input
+                    type="text"
+                    id="dish-subtype"
+                    placeholder="Subtype (e.g., Dry, Wet, Hot)"
+                  />
+                 </div>
+                
+                <button type="submit" class="btn-primary full-width">Save / Update Item</button>
               </form>
             </div>
 
@@ -245,24 +248,32 @@
           <!-- Billing Section -->
           <section id="billing-section" class="page-section">
             <div class="glass-card billing-card">
-              <div class="row">
-                <input type="text" id="cust-name" placeholder="Customer Name" />
-                <input type="text" id="cust-mobile" placeholder="Mobile" />
+              <!-- POS Header -->
+              <div class="pos-header">
+                  <div class="search-bar">
+                      <ion-icon name="search-outline"></ion-icon>
+                      <input type="text" id="pos-search" placeholder="Search Item or Code..." autocomplete="off">
+                  </div>
+                  <input type="text" id="cust-name-opt" placeholder="Customer Name (Optional)" style="margin-bottom:10px; font-size: 0.9rem; padding: 8px;">
               </div>
-              <hr />
-              <div class="bill-items-input">
-                <!-- Removed Dropdown -->
-                <p style="margin-bottom: 10px; font-weight: 500;">Select Dish to Add:</p>
+
+              <!-- Categories -->
+              <div id="category-filters" class="category-tabs">
+                  <!-- Populated by JS -->
+                  <div class="loading">Loading...</div>
+              </div>
+              <!-- Subcategories (populated when a Type is active) -->
+              <div id="subcategory-filters" class="category-tabs" style="margin-top:8px;">
+                <!-- Populated by JS -->
               </div>
               
-              <!-- New Menu Grid -->
+              <!-- Menu Grid -->
               <div id="billing-menu-grid" class="menu-grid">
-                <!-- Cards populated by JS -->
                 <div class="loading">Loading menu...</div>
               </div>
 
+              <!-- Bill List -->
               <div id="current-bill-items" class="bill-list">
-                <!-- Added items -->
                 <p class="empty-msg">No items added to bill.</p>
               </div>
 
@@ -275,6 +286,35 @@
               </button>
             </div>
           </section>
+
+          <!-- Invoice Success Modal -->
+          <div id="invoice-modal" class="modal-overlay">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <h3>Franchise Store</h3>
+                  </div>
+                  <div class="modal-body">
+                      <p><strong>Date:</strong> <span id="modal-date"></span></p>
+                      <p><strong>Bill No:</strong> <span id="modal-bill-no"></span></p>
+                      <p><strong>Customer:</strong> <span id="modal-customer"></span></p>
+                      <hr>
+                      <div class="total-paid">
+                           <p>Total Paid</p>
+                           <h2 id="modal-total"></h2>
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                      <button id="modal-close-btn" class="btn-text">Close</button>
+                      <button id="modal-print-thermal-btn" class="btn-primary" style="background:#333;">Thermal Print</button>
+                      <button id="modal-print-a4-btn" class="btn-primary">A4 Invoice</button>
+                  </div>
+              </div>
+          </div>
+          
+          <!-- Hidden Thermograph Receipt Area -->
+          <div id="receipt-summary-area" class="hidden-print">
+             <div id="receipt-print-area"></div>
+          </div>
 
           <!-- History Section -->
           <section id="history-section" class="page-section">
