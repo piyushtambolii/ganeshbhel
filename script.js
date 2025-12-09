@@ -112,17 +112,21 @@ const app = {
         const createBtn = document.getElementById('create-invoice-btn');
         if (createBtn) createBtn.addEventListener('click', () => {
             if (state.currentBill.length === 0) return alert('Bill is empty');
+            if (state.currentBill.length === 0) return alert('Bill is empty');
             const total = state.currentBill.reduce((s, it) => s + (it.price * it.qty), 0);
             const dateStr = new Date().toLocaleDateString();
             const custInput = document.getElementById('cust-name-opt');
             const customer = custInput && custInput.value ? custInput.value : 'Walk-in';
             const billNo = 'BILL' + Math.floor(Math.random() * 100000);
-            document.getElementById('modal-date') && (document.getElementById('modal-date').textContent = dateStr);
-            document.getElementById('modal-bill-no') && (document.getElementById('modal-bill-no').textContent = billNo);
-            document.getElementById('modal-customer') && (document.getElementById('modal-customer').textContent = customer);
-            document.getElementById('modal-total') && (document.getElementById('modal-total').textContent = `₹${total}`);
-            modal?.classList.add('active');
+            
+            // Direct Print Flow
             state.tempInvoice = { total, customer, billNo, items: JSON.parse(JSON.stringify(state.currentBill)), date: new Date().toISOString() };
+            this.handlePrint('thermal'); // Immediate print
+            
+            // Clear Bill Logic (Optional: Clear after print trigger)
+            state.currentBill = [];
+            this.renderBill();
+            if (custInput) custInput.value = '';
         });
 
         document.getElementById('modal-print-thermal-btn')?.addEventListener('click', () => this.handlePrint('thermal'));
@@ -164,28 +168,79 @@ const app = {
 
     handlePrint(type) {
         if (!state.tempInvoice) return alert('No invoice data');
-        this.printInvoice(state.tempInvoice.items, {
+        const items = state.tempInvoice.items;
+        const meta = {
             total: state.tempInvoice.total,
             customer: state.tempInvoice.customer,
             id: state.tempInvoice.billNo,
             date: state.tempInvoice.date
-        }, type);
+        };
 
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return alert('Popup blocked! Please allow popups.');
+        
+        const style = `
+            body { font-family: 'Courier New', monospace; padding: 10px; width: 300px; margin: 0 auto; color:black; }
+            .header { text-align: center; margin-bottom: 10px; }
+            .title { font-weight: bold; font-size: 1.2em; }
+            .divider { border-top: 1px dashed #000; margin: 8px 0; }
+            .row { display: flex; justify-content: space-between; font-size: 0.9em; }
+            .total { font-weight: bold; font-size: 1.1em; margin-top: 5px; }
+            .footer { text-align: center; font-size: 0.8em; margin-top: 15px; }
+            @page { size: 80mm auto; margin: 0; }
+        `;
+        
+        const itemsHtml = items.map(item => `
+            <div>${item.name}</div>
+            <div class="row">
+                <span>${item.qty} x ${item.price}</span>
+                <span>₹${item.qty * item.price}</span>
+            </div>
+        `).join('');
+        
+        const content = `
+            <!DOCTYPE html>
+            <html>
+            <head><title>Print Bill</title><style>${style}</style></head>
+            <body>
+                <div class="header">
+                    <div class="title">GANESH BHEL</div>
+                    <div>Inventory & Billing</div>
+                </div>
+                <div class="divider"></div>
+                <div class="row"><span>Date: ${new Date(meta.date).toLocaleDateString()}</span><span>${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
+                <div class="row"><span>Bill No: ${meta.id}</span></div>
+                <div class="row"><span>Cust: ${meta.customer}</span></div>
+                <div class="divider"></div>
+                ${itemsHtml}
+                <div class="divider"></div>
+                <div class="row total">
+                    <span>TOTAL</span>
+                    <span>₹${meta.total}</span>
+                </div>
+                <div class="footer">
+                    <p>Thank you! Visit Again.</p>
+                </div>
+                <script>
+                    window.onload = function() { window.print(); window.close(); }
+                <\/script>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(content);
+        printWindow.document.close();
+
+        // Save to History (Mock/API)
         const invoice = {
             action: 'createInvoice',
-            id: state.tempInvoice.billNo,
-            total: state.tempInvoice.total,
-            customerName: state.tempInvoice.customer,
-            items: JSON.stringify(state.tempInvoice.items),
-            date: state.tempInvoice.date
+            id: meta.id,
+            total: meta.total,
+            customerName: meta.customer,
+            items: JSON.stringify(items),
+            date: meta.date
         };
-        this.apiCall(invoice).then(() => {
-            state.currentBill = [];
-            this.renderBill();
-            this.loadData();
-            document.getElementById('invoice-modal')?.classList.remove('active');
-            const custInput = document.getElementById('cust-name-opt'); if (custInput) custInput.value = '';
-        }).catch(() => { /* ignore in mock mode */ });
+        this.apiCall(invoice).then(() => this.loadData()).catch(() => {});
     },
 
     navTo(targetId) {
@@ -280,6 +335,7 @@ const app = {
         if (!menuGrid) return;
         menuGrid.innerHTML = filtered.map(d => `
             <div class="dish-card" onclick="app.addToBill('${(d.name||'').replace(/'/g, "\\'")}')">
+                <img src="${d.image || 'https://cdn-icons-png.flaticon.com/512/1046/1046751.png'}" alt="${d.name}" loading="lazy">
                 <div class="dish-info">
                     <div class="dish-title">${d.name}</div>
                     <div class="dish-price">#${d.code || ''} | ₹${d.price}</div>
