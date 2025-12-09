@@ -36,19 +36,17 @@
             --safe-bottom: env(safe-area-inset-bottom);
         }
         /* print area fixed above bottom nav on mobile, sticky on desktop */
-        .mobile-print-area { position: fixed; left: 0; right: 0; bottom: calc(var(--nav-height) + 10px); z-index: 80; }
+        .mobile-print-area { position: fixed; left: 0; right: 0; bottom: var(--nav-height); z-index: 80; width: 100%; }
         @media (min-width: 768px) {
             .mobile-print-area { position: sticky; bottom: 0; left: auto; right: auto; z-index: 10; }
         }
-        /* Ensure the main content and scrollable lists leave room for the fixed print area + safe inset */
-        #billing-section .overflow-safe,
-        #billing-menu-grid,
+        /* Ensure scrollable content leaves room for fixed print area on mobile */
         #current-bill-items {
             padding-bottom: calc(var(--print-area-height) + 16px + var(--safe-bottom));
         }
         /* Ensure bottom nav uses the declared height on small screens */
         @media (max-width: 767px) {
-            nav[role='navigation'], nav { height: var(--nav-height); }
+            nav { height: var(--nav-height); }
         }
 
         /* --- changed code: reduce header height when billing view is active --- */
