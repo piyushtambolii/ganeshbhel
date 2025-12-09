@@ -4,7 +4,7 @@ const API_URL = 'REPLACE_WITH_YOUR_DEPLOYED_WEB_APP_URL';
 
 // App State
 const state = {
-    inventory: [],
+
     dishes: [],
     history: [],
     currentBill: [],
@@ -64,32 +64,7 @@ const app = {
 
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', (e) => { e.preventDefault(); this.navTo(item.dataset.target); }));
 
-        const invForm = document.getElementById('inventory-form');
-        if (invForm) {
-            invForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const item = {
-                    action: 'addInventory',
-                    name: document.getElementById('inv-name')?.value,
-                    qty: document.getElementById('inv-qty')?.value,
-                    unit: document.getElementById('inv-unit')?.value,
-                    cost: document.getElementById('inv-cost')?.value,
-                    price: document.getElementById('inv-price')?.value
-                };
-                this.apiCall(item).then(() => { alert('Stock Added!'); this.loadData(); e.target.reset(); }).catch(() => { alert('Add failed'); });
-            });
-        }
 
-        const addIngBtn = document.getElementById('add-ingredient-btn');
-        if (addIngBtn) addIngBtn.addEventListener('click', () => {
-            const div = document.createElement('div');
-            div.className = 'ingredient-row';
-            div.innerHTML = `
-                <select class="inv-select" required>${this.getInvOptions()}</select>
-                <input type="number" class="ing-qty" placeholder="Qty" step="0.01" required>
-            `;
-            document.getElementById('ingredients-inputs')?.appendChild(div);
-        });
 
         const dishForm = document.getElementById('dish-form');
         if (dishForm) dishForm.addEventListener('submit', (e) => {
@@ -231,12 +206,10 @@ const app = {
     async loadData() {
         if (API_URL.includes('REPLACE')) { console.warn('API URL not set. Using mock data.'); this.mockData(); return; }
         try {
-            const [inv, dishes, hist] = await Promise.all([
-                this.apiCall({ action: 'getInventory' }),
+            const [dishes, hist] = await Promise.all([
                 this.apiCall({ action: 'getDishes' }),
                 this.apiCall({ action: 'getHistory' })
             ]);
-            state.inventory = inv || [];
             state.dishes = dishes || [];
             state.history = hist || [];
             this.renderUI();
@@ -252,21 +225,13 @@ const app = {
 
     renderUI() {
         document.getElementById('dash-dishes-count') && (document.getElementById('dash-dishes-count').textContent = state.dishes.length);
-        document.getElementById('dash-stock-count') && (document.getElementById('dash-stock-count').textContent = state.inventory.length);
+
         if (document.getElementById('dash-bills-count')) {
             const todayCount = state.history.filter(h => { const d = new Date(h.date); const now = new Date(); return d.getDate() === now.getDate() && d.getMonth() === now.getMonth(); }).length;
             document.getElementById('dash-bills-count').textContent = todayCount;
         }
 
-        const invList = document.getElementById('inventory-list');
-        if (invList) invList.innerHTML = state.inventory.map(i => `
-            <div class="list-item">
-                <div>
-                    <div class="list-item-title">${i.name}</div>
-                    <div class="list-item-subtitle">${i.qty} ${i.unit} available</div>
-                </div>
-            </div>
-        `).join('');
+
 
         const dishList = document.getElementById('dishes-list');
         if (dishList) dishList.innerHTML = state.dishes.map(d => `
@@ -351,9 +316,7 @@ const app = {
         this.apiCall({ action: 'deleteDish', code }).then(() => this.loadData()).catch(() => alert('Delete failed'));
     },
 
-    getInvOptions() {
-        return '<option value="">Select Ingredient</option>' + state.inventory.map(i => `<option value="${i.name}">${i.name} (${i.unit})</option>`).join('');
-    },
+
 
     renderBill() {
         const list = document.getElementById('current-bill-items');
@@ -410,7 +373,7 @@ const app = {
     },
 
     mockData() {
-        state.inventory = [ { name: 'Puffed Rice', qty: 10, unit: 'kg', cost: 50, price: 60 } ];
+
         state.dishes = [
             { code: '101', name: 'Bhel Puri', price: 50, type: 'Chaat', subtype: 'Dry' },
             { code: '102', name: 'Sev Puri', price: 60, type: 'Chaat', subtype: 'Dry' },
