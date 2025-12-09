@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Ganesh Bhel - Inventory & Billing</title>
+    <link rel="manifest" href="manifest.json" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Ionicons -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
+    ></script>
+    <!-- PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  </head>
+  <body>
+    <!-- App Container -->
+    <div id="app">
+      <!-- Notifications -->
+      <div id="notification-area"></div>
+
+      <!-- Login Screen -->
+      <section id="login-screen" class="screen active">
+        <div class="login-container glass-card">
+          <div class="logo-area">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
+              alt="Ganesh Bhel Logo"
+              class="app-logo"
+            />
+            <h1>Ganesh Bhel</h1>
+            <p>Inventory & Billing System</p>
+          </div>
+          <form id="login-form">
+            <div class="input-group">
+              <ion-icon name="mail-outline"></ion-icon>
+              <input
+                type="email"
+                id="email"
+                placeholder="Email"
+                required
+                value="franchise1@shop.com"
+              />
+            </div>
+            <div class="input-group">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              <input
+                type="password"
+                id="password"
+                placeholder="Password"
+                required
+                value="fran123"
+              />
+            </div>
+            <button type="submit" class="btn-primary">
+              Sign In <ion-icon name="arrow-forward-outline"></ion-icon>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Main Layout (Hidden until logged in) -->
+      <div id="main-layout" class="hidden">
+        <!-- Header -->
+        <header class="app-header glass-header">
+          <div class="header-left">
+            <h2 id="page-title">Dashboard</h2>
+          </div>
+          <div class="header-right">
+            <button id="logout-btn" class="icon-btn">
+              <ion-icon name="log-out-outline"></ion-icon>
+            </button>
+          </div>
+        </header>
+
+        <!-- Content Area -->
+        <main id="content-area">
+          <!-- Dashboard Section -->
+          <section id="dashboard-section" class="page-section active">
+            <div class="stats-grid">
+              <div class="stat-card glass-card">
+                <div class="icon-box orange">
+                  <ion-icon name="fast-food-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                  <h3>Total Dishes</h3>
+                  <p id="dash-dishes-count">0</p>
+                </div>
+              </div>
+              <div class="stat-card glass-card">
+                <div class="icon-box green">
+                  <ion-icon name="cube-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                  <h3>Stock Items</h3>
+                  <p id="dash-stock-count">0</p>
+                </div>
+              </div>
+              <div class="stat-card glass-card">
+                <div class="icon-box blue">
+                  <ion-icon name="receipt-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                  <h3>Today's Bills</h3>
+                  <p id="dash-bills-count">0</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <h3>Quick Actions</h3>
+              <div class="action-buttons">
+                <button class="action-btn" onclick="app.navTo('billing')">
+                  <ion-icon name="add-circle"></ion-icon> New Bill
+                </button>
+                <button
+                  class="action-btn secondary"
+                  onclick="app.navTo('inventory')"
+                >
+                  <ion-icon name="cube"></ion-icon> Add Stock
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Inventory Section -->
+          <section id="inventory-section" class="page-section">
+            <div class="glass-card form-card">
+              <h3>Add Inventory Item</h3>
+              <form id="inventory-form">
+                <input
+                  type="text"
+                  id="inv-name"
+                  placeholder="Item Name"
+                  required
+                />
+                <div class="row">
+                  <input
+                    type="number"
+                    id="inv-qty"
+                    placeholder="Qty"
+                    required
+                  />
+                  <input
+                    type="text"
+                    id="inv-unit"
+                    placeholder="Unit (kg, L)"
+                    required
+                  />
+                </div>
+                <div class="row">
+                  <input
+                    type="number"
+                    id="inv-cost"
+                    placeholder="Cost Price"
+                    required
+                  />
+                  <input
+                    type="number"
+                    id="inv-price"
+                    placeholder="Selling Price (opt)"
+                  />
+                </div>
+                <button type="submit" class="btn-primary">Add Item</button>
+              </form>
+            </div>
+
+            <div class="list-container">
+              <h3>Current Stock</h3>
+              <div id="inventory-list" class="item-list">
+                <!-- Items populated here -->
+                <div class="loading">Loading inventory...</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Dishes Section -->
+          <section id="dishes-section" class="page-section">
+            <div class="glass-card form-card">
+              <h3>Add New Dish</h3>
+              <form id="dish-form">
+                <input
+                  type="text"
+                  id="dish-name"
+                  placeholder="Dish Name (e.g., Bhel Puri)"
+                  required
+                />
+                <input
+                  type="number"
+                  id="dish-price"
+                  placeholder="Price"
+                  required
+                />
+                <div class="ingredients-area">
+                  <h4>Ingredients (Stock Deduction)</h4>
+                  <div id="ingredients-inputs">
+                    <!-- Dynamic ingredient rows -->
+                    <div class="ingredient-row">
+                      <select class="inv-select" required>
+                        <option>Loading...</option>
+                      </select>
+                      <input
+                        type="number"
+                        class="ing-qty"
+                        placeholder="Qty"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id="add-ingredient-btn"
+                    class="btn-text"
+                  >
+                    + Add Ingredient
+                  </button>
+                </div>
+                <button type="submit" class="btn-primary">Save Dish</button>
+              </form>
+            </div>
+
+            <div class="list-container">
+              <h3>Menu</h3>
+              <div id="dishes-list" class="item-list">
+                <!-- Items populated here -->
+                <div class="loading">Loading dishes...</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Billing Section -->
+          <section id="billing-section" class="page-section">
+            <div class="glass-card billing-card">
+              <div class="row">
+                <input type="text" id="cust-name" placeholder="Customer Name" />
+                <input type="text" id="cust-mobile" placeholder="Mobile" />
+              </div>
+              <hr />
+              <div class="bill-items-input">
+                <!-- Removed Dropdown -->
+                <p style="margin-bottom: 10px; font-weight: 500;">Select Dish to Add:</p>
+              </div>
+              
+              <!-- New Menu Grid -->
+              <div id="billing-menu-grid" class="menu-grid">
+                <!-- Cards populated by JS -->
+                <div class="loading">Loading menu...</div>
+              </div>
+
+              <div id="current-bill-items" class="bill-list">
+                <!-- Added items -->
+                <p class="empty-msg">No items added to bill.</p>
+              </div>
+
+              <div class="bill-total">
+                <span>Total:</span>
+                <span id="bill-total-amount">₹0</span>
+              </div>
+              <button id="create-invoice-btn" class="btn-primary full-width">
+                Generate Invoice
+              </button>
+            </div>
+          </section>
+
+          <!-- History Section -->
+          <section id="history-section" class="page-section">
+            <h3>Invoice History</h3>
+            <div id="invoice-list" class="item-list">
+              <div class="loading">Loading history...</div>
+            </div>
+          </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+          <a href="#" class="nav-item active" data-target="dashboard">
+            <ion-icon name="grid-outline"></ion-icon>
+            <span>Home</span>
+          </a>
+          <a href="#" class="nav-item" data-target="inventory">
+            <ion-icon name="cube-outline"></ion-icon>
+            <span>Stock</span>
+          </a>
+          <a href="#" class="nav-item" data-target="dishes">
+            <ion-icon name="restaurant-outline"></ion-icon>
+            <span>Menu</span>
+          </a>
+          <a href="#" class="nav-item" data-target="billing">
+            <ion-icon name="receipt-outline"></ion-icon>
+            <span>Bill</span>
+          </a>
+          <a href="#" class="nav-item" data-target="history">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>History</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
