@@ -635,12 +635,13 @@ select:focus {
 
 /* Mobile-specific billing layout fixes */
 @media (max-width: 767px) {
-  :root { --mobile-bill-height: 48vh; }
+  :root { --mobile-bill-height: 44vh; }
 
   /* Remove the right border for the menu area on mobile and add bottom padding so content isn't hidden */
   .billing-menu {
     border-right: none !important;
-    padding-bottom: calc(var(--mobile-bill-height) + 24px);
+    /* leave a bit more space so tall menus won't be hidden */
+    padding-bottom: calc(var(--mobile-bill-height) + 48px);
   }
 
   /* Make the current bill panel fixed at the bottom on mobile, above the bottom nav */
@@ -648,40 +649,49 @@ select:focus {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(var(--nav-height));
+    /* sit above bottom nav and safe area */
+    bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 6px);
     width: 100%;
     height: var(--mobile-bill-height);
     max-height: 62vh;
     border-top-left-radius: 18px;
     border-top-right-radius: 18px;
     box-shadow: 0 -10px 30px rgba(0,0,0,0.08);
-    z-index: 95;
-    overflow: hidden;
+    z-index: 995;
+    overflow: auto; /* allow the whole panel to scroll so footer scrolls with content */
   }
 
   /* Ensure the bill items area is scrollable inside the fixed panel */
+  /* Make inner lists expand naturally and let the panel scroll as a whole */
   .current-bill-panel .overflow-y-auto, .current-bill-panel .flex-1 {
-    max-height: calc(var(--mobile-bill-height) - 110px);
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   /* Make print area visually compact and keep it inside the panel */
+  /* Footer (total/print) should be part of normal flow and scroll with panel */
   .current-bill-panel .mobile-print-area {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 12px;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding: 10px 12px calc(var(--safe-area-bottom) + 12px);
     background: #f9fafb;
     border-top: 1px solid rgba(0,0,0,0.04);
   }
 
   /* Slightly smaller header spacing and font on mobile billing */
-  header { padding-left: 12px; padding-right: 12px; }
+  header { padding-left: 10px; padding-right: 10px; height:48px; }
+  header #page-title { font-size: 1rem; }
 
   /* Ensure the billing grid has comfortable gaps and item sizes on smaller screens */
   #billing-menu-grid { gap: 8px; }
-  #billing-menu-grid .group img { height: 56px; width: 56px; }
+  #billing-menu-grid .group img { height: 52px; width: 52px; }
+
+  /* Make the billing search smaller and category chips tighter */
+  #pos-search { padding: 8px 10px; height: 38px; font-size: 14px; }
+  #category-filters button { padding: 6px 10px; font-size: 12px; }
+  #category-filters img { width: 20px; height: 20px; }
 
   /* Avoid bottom nav overlap when printing area is present */
   #billing-section .overflow-safe, #billing-menu-grid { padding-bottom: 8px; }
