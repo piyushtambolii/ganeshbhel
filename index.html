@@ -159,7 +159,7 @@
                 </div>
 
                 <!-- Right: Current Bill -->
-                <div class="w-full md:w-96 bg-white flex flex-col h-[50vh] md:h-full shadow-xl z-20">
+                <div class="w-full md:w-96 bg-white flex flex-col h-full max-h-[80vh] md:h-full shadow-xl z-20" style="min-height:320px;">
                     <div class="p-4 border-b border-gray-200 bg-gray-50">
                         <h3 class="font-bold text-gray-800">Current Order</h3>
                         <p class="text-xs text-gray-500" id="bill-date">--</p>
@@ -172,7 +172,7 @@
                         </div>
                     </div>
 
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3">
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3 fixed left-0 right-0 bottom-0 md:sticky md:left-auto md:right-auto md:bottom-0" style="background: #f9fafb; z-index: 50;">
                          <div class="flex justify-between items-center text-lg font-bold text-gray-900">
                             <span>Total</span>
                             <span id="bill-total-amount">₹0</span>

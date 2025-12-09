@@ -369,6 +369,32 @@ const app = {
 
 window.addEventListener('DOMContentLoaded', () => app.init());
 
+// --- Auto-save daily summary to Google Sheet ---
+function autoSaveDailySummary() {
+    // Calculate time left in the day
+    const now = new Date();
+    const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
+    const msUntilNextHour = nextHour - now;
+    setTimeout(() => {
+        // Prepare summary data
+        const summary = {
+            action: 'saveDailySummary',
+            date: now.toLocaleDateString(),
+            dishes: JSON.stringify(state.dishes),
+            sales: state.history.reduce((acc, curr) => acc + (parseFloat(curr.total)||0), 0)
+        };
+        app.apiCall(summary).then(res => {
+            console.log('Daily summary saved', res);
+        }).catch(err => console.error('Daily summary save failed', err));
+        // Schedule next auto-save
+        autoSaveDailySummary();
+    }, msUntilNextHour);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    autoSaveDailySummary();
+});
+
 // --- Items CRUD Logic ---
 app.renderItems = function() {
     const list = document.getElementById('items-list');
