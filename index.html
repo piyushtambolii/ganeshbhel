@@ -31,7 +31,7 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         /* Ensure print area/menu spacing and safe-area awareness on mobile */
         :root {
-            --nav-height: 40px;
+            --nav-height: 78px; /* increased a bit to fill small bottom gap */
             --print-area-height: 84px;
             --safe-bottom: env(safe-area-inset-bottom);
         }
@@ -50,6 +50,15 @@
         @media (max-width: 767px) {
             nav[role='navigation'], nav { height: var(--nav-height); }
         }
+
+        /* --- changed code: reduce header height when billing view is active --- */
+        /* default header transition for smooth change */
+        header { transition: height 180ms ease, min-height 180ms ease; }
+        /* global header has Tailwind h-16 (64px). When billing is active, reduce to ~56px */
+        body.billing-active header { height: 56px !important; min-height: 56px !important; }
+        /* optional: reduce header font-size slightly when compact */
+        body.billing-active header #page-title { font-size: 1rem; }
+        /* --- end changed code --- */
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
@@ -118,7 +127,7 @@
         <!-- Content Area -->
         <main class="flex-1 h-full overflow-hidden flex flex-col bg-gray-50 pb-20 md:pb-0">
             <!-- Header -->
-            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
                 <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
                 <div class="text-sm text-gray-500" id="user-display">Franchise 1</div>
             </header>
@@ -211,6 +220,13 @@
 
              <!-- History/History Section -->
             <section id="history-section" class="page-section hidden p-6 h-full overflow-y-auto">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-2xl font-bold">History</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="run-eod-btn" class="bg-indigo-600 text-white px-3 py-2 rounded-md text-sm">Run EOD Now</button>
+                        <button id="export-json-btn" class="bg-green-600 text-white px-3 py-2 rounded-md text-sm">Export JSON</button>
+                    </div>
+                </div>
                 <div class="space-y-4" id="invoice-list">
                     <!-- History Items -->
                 </div>
@@ -226,28 +242,39 @@
                 <h2 class="text-2xl font-bold mb-4">Manage Items</h2>
                 <form id="item-form" class="bg-white p-4 rounded-xl shadow mb-6 flex flex-col gap-3 max-w-lg">
                     <input type="hidden" id="item-id">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Name</label>
-                        <input type="text" id="item-name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Code</label>
-                        <input type="text" id="item-code" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Price</label>
-                        <input type="number" id="item-price" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Type</label>
-                        <input type="text" id="item-type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Image URL</label>
-                        <input type="text" id="item-image" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Name</label>
+                            <input type="text" id="item-name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Code (auto)</label>
+                            <input type="text" id="item-code" class="mt-1 block w-full border-gray-200 rounded-md shadow-sm bg-gray-50" readonly placeholder="Auto-generated">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Price (₹)</label>
+                            <input type="number" id="item-price" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Category / Type</label>
+                            <select id="item-type-select" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-white">
+                                <option value="">Select category</option>
+                                <option value="__new">+ Add new category...</option>
+                            </select>
+                            <input type="text" id="item-type-new" class="mt-2 block w-full border-gray-300 rounded-md shadow-sm hidden" placeholder="Enter new category name">
+                            <datalist id="type-suggestions"></datalist>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Upload Image (optional)</label>
+                            <div class="mt-1 flex items-center gap-3">
+                                <input type="file" id="item-image-file" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-orange-50 file:text-orange-700" />
+                                <img id="item-image-preview" src="" alt="Preview" class="hidden w-12 h-12 object-cover rounded-md border" />
+                                <input type="hidden" id="item-image" />
+                            </div>
+                        </div>
                     </div>
                     <div class="flex gap-2">
-                        <button type="submit" id="item-save-btn" class="bg-orange-600 text-white px-4 py-2 rounded">Save</button>
+                        <button type="submit" id="item-save-btn" class="bg-orange-600 text-white px-4 py-2 rounded">Save Item</button>
                         <button type="button" id="item-cancel-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded">Cancel</button>
                     </div>
                 </form>
@@ -258,6 +285,35 @@
     </div>
 
     <!-- Scripts -->
+    <!-- changed code: small script to keep body.billing-active in sync with billing-section visibility -->
+    <script>
+        // Toggle a class on body when billing section is visible so header height can change only for billing
+        (function(){
+            function updateBillingClass() {
+                const billing = document.getElementById('billing-section');
+                if (!billing) return;
+                const isVisible = !billing.classList.contains('hidden');
+                document.body.classList.toggle('billing-active', isVisible);
+            }
+
+            document.addEventListener('DOMContentLoaded', function(){
+                const billing = document.getElementById('billing-section');
+                if (!billing) return;
+                // Observe class attribute changes on billing-section (to detect hide/show)
+                const mo = new MutationObserver(updateBillingClass);
+                mo.observe(billing, { attributes: true, attributeFilter: ['class'] });
+
+                // Hook nav clicks to update after existing handlers run
+                document.querySelectorAll('a.nav-item[data-target]').forEach(function(a){
+                    a.addEventListener('click', function(){ setTimeout(updateBillingClass, 120); });
+                });
+
+                // initial sync
+                updateBillingClass();
+            });
+        })();
+    </script>
+
     <script src="script.js"></script>
 </body>
 </html>

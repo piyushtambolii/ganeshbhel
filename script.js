@@ -6,6 +6,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwtF2t6pkIpOdwg1IwREsyU
 const state = {
     dishes: [],
     history: [],
+    dailySummaries: [],
     currentBill: [],
     user: null,
     tempInvoice: null
@@ -94,12 +95,12 @@ const app = {
         const createBtn = document.getElementById('create-invoice-btn');
         if (createBtn) createBtn.addEventListener('click', () => {
              if (state.currentBill.length === 0) return alert('Bill is empty');
-             
+
              const total = state.currentBill.reduce((s, it) => s + (it.price * it.qty), 0);
              const custInput = document.getElementById('cust-name-opt');
              const customer = custInput && custInput.value ? custInput.value : 'Walk-in';
              const billNo = 'BILL' + Math.floor(Math.random() * 100000);
-             
+
              const invoiceData = {
                  action: 'createInvoice',
                  id: billNo,
@@ -110,28 +111,32 @@ const app = {
 
              // 1. Direct Print
              this.handlePrint(state.currentBill, { id: billNo, total, customer, date: new Date() });
-             
-                 // 2. Send to Backend
-                this.apiCall(invoiceData).then(res => {
-                    console.log('Saved to Sheet', res);
-                    // Add to local history and update UI
-                    const invoiceObj = { id: billNo, date: new Date().toISOString(), total, customer, items: invoiceData.items };
-                    state.history.unshift(invoiceObj);
-                    this.renderHistory();
-                    // After save, clear bill and reset for next customer
-                    state.currentBill = [];
-                    this.renderBill();
-                    if(custInput) custInput.value = '';
-                    // Focus on billing section for next customer
-                    this.navTo('billing');
-                    // Optionally, focus the search box for speed
-                    setTimeout(() => {
-                        document.getElementById('pos-search')?.focus();
-                    }, 200);
-                }).catch(err => {
-                    console.error('Save failed', err);
-                    alert('Failed to save invoice. Please try again.');
-                });
+
+             // 2. Save locally (persist immediately) so history is permanent even offline
+             const invoiceObj = { id: billNo, date: new Date().toISOString(), total, customer, items: invoiceData.items };
+             state.history.unshift(invoiceObj);
+             this.persistInvoices();
+             this.renderHistory();
+
+             // After save, clear bill and reset for next customer
+             state.currentBill = [];
+             this.renderBill();
+             if(custInput) custInput.value = '';
+             // Focus on billing section for next customer
+             this.navTo('billing');
+             // Optionally, focus the search box for speed
+             setTimeout(() => {
+                 document.getElementById('pos-search')?.focus();
+             }, 200);
+
+            // 3. Optionally send to backend, but do not rely on it for local persistence
+            if (!API_URL.includes('REPLACE')) {
+                 this.apiCall(invoiceData).then(res => {
+                     console.log('Saved to Sheet', res);
+                 }).catch(err => {
+                     console.warn('Remote save failed (invoice persisted locally)', err);
+                 });
+             }
         });
     },
 
@@ -158,18 +163,32 @@ const app = {
     },
 
     async loadData() {
-        if (API_URL.includes('REPLACE')) { 
-            console.warn('Using Mock Data. Configure API_URL in script.js'); 
-            this.mockData(); 
-            return; 
+        // Load local persistence first (invoices and daily summaries)
+        try {
+            const savedInv = localStorage.getItem('ganesh_invoices');
+            if (savedInv) state.history = JSON.parse(savedInv);
+        } catch (e) { state.history = state.history || []; }
+        try {
+            const savedDaily = localStorage.getItem('ganesh_daily_summaries');
+            if (savedDaily) state.dailySummaries = JSON.parse(savedDaily);
+        } catch (e) { state.dailySummaries = state.dailySummaries || []; }
+
+        if (API_URL.includes('REPLACE')) {
+            console.warn('Using Mock Data for dishes. Configure API_URL in script.js');
+            this.mockData(true);
+            return;
         }
 
         try {
-            // Fetch History (GET)
+            // Fetch remote history (optional) but do not overwrite local persistence
             const res = await fetch(`${API_URL}?action=getHistory`);
             const data = await res.json();
-            state.history = Array.isArray(data) ? data : [];
-            
+            // merge remote data into local history but keep local first (avoid duplicates)
+            if (Array.isArray(data)) {
+                const existingIds = new Set((state.history || []).map(h => h.id));
+                data.forEach(d => { if (!existingIds.has(d.id)) state.history.unshift(d); });
+            }
+
             // Still verify dishes from mock or fetching
             this.mockData(true); // Populate dishes locally for now
             this.renderHistory();
@@ -197,23 +216,53 @@ const app = {
     },
 
     mockData(onlyDishes = false) {
-        state.dishes = [
-            { code: '101', name: 'Bhel Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
-            { code: '102', name: 'Sev Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
-            { code: '103', name: 'Pani Puri', price: 40, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/706/706195.png' },
-            { code: '104', name: 'Dahi Puri', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
-            { code: '105', name: 'Samosa Chaat', price: 90, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/3014/3014520.png' },
-            { code: '106', name: 'Vada Pav', price: 25, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046857.png' },
-            { code: '201', name: 'Masala Chai', price: 20, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/751/751621.png' },
-            { code: '202', name: 'Cold Coffee', price: 50, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' },
-            { code: '203', name: 'Lassi', price: 60, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/2405/2405479.png' }
-        ];
+        // Load saved items first (persistent storage)
+        const saved = localStorage.getItem('ganesh_items');
+        if (saved) {
+            try {
+                state.dishes = JSON.parse(saved);
+            } catch (e) {
+                state.dishes = [];
+            }
+        }
+
+        // If no saved items, fall back to some sensible mock items
+        if (!state.dishes || state.dishes.length === 0) {
+            state.dishes = [
+                { code: '1', name: 'Bhel Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+                { code: '2', name: 'Sev Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+                { code: '3', name: 'Pani Puri', price: 40, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/706/706195.png' },
+                { code: '4', name: 'Dahi Puri', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+                { code: '5', name: 'Samosa Chaat', price: 90, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/3014/3014520.png' },
+                { code: '6', name: 'Vada Pav', price: 25, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046857.png' },
+                { code: '7', name: 'Masala Chai', price: 20, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/751/751621.png' },
+                { code: '8', name: 'Cold Coffee', price: 50, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' },
+                { code: '9', name: 'Lassi', price: 60, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/2405/2405479.png' }
+            ];
+            // persist the initial mock so owner sees them persistently
+            localStorage.setItem('ganesh_items', JSON.stringify(state.dishes));
+        }
         
         if (!onlyDishes) {
             state.history = [{ id: 'MOCK1', date: new Date().toISOString(), total: 120, customer: 'Test' }];
         }
         
         this.renderUI();
+    },
+
+    // Utility: persist dishes to localStorage
+    persistItems() {
+        localStorage.setItem('ganesh_items', JSON.stringify(state.dishes));
+    },
+
+    // Utility: persist invoices (history)
+    persistInvoices() {
+        try { localStorage.setItem('ganesh_invoices', JSON.stringify(state.history)); } catch (e) { console.error('Persist invoices failed', e); }
+    },
+
+    // Utility: persist daily summaries
+    persistDailySummaries() {
+        try { localStorage.setItem('ganesh_daily_summaries', JSON.stringify(state.dailySummaries)); } catch (e) { console.error('Persist daily summaries failed', e); }
     },
 
     renderUI() {
@@ -223,19 +272,25 @@ const app = {
         const sales = state.history.reduce((acc, curr) => acc + (parseFloat(curr.total)||0), 0);
         document.getElementById('dash-sales-total').textContent = sales;
         
-        // Render Categories
-        const cats = ['All', ...new Set(state.dishes.map(d => d.type))];
+        // Render Categories with small thumbnails (first item image for each category)
+        const cats = ['All', ...new Set(state.dishes.map(d => d.type).filter(Boolean))];
         const catContainer = document.getElementById('category-filters');
         if(catContainer) {
-            catContainer.innerHTML = cats.map((c, i) => `
-                <button data-cat="${c}" class="${i===0 ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600'} px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition hover:bg-orange-500 hover:text-white">
-                    ${c}
+            catContainer.innerHTML = cats.map((c, i) => {
+                const thumb = c === 'All' ? '' : (state.dishes.find(d => d.type === c)?.image || '');
+                return `
+                <button data-cat="${c}" class="${i===0 ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600'} px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition hover:bg-orange-500 hover:text-white flex items-center gap-2">
+                    ${thumb ? `<img src="${thumb}" class="w-6 h-6 rounded-full object-cover border" alt="${c}"/>` : `<ion-icon name="grid-outline" class="text-lg"></ion-icon>`}
+                    <span class="leading-none">${c}</span>
                 </button>
-            `).join('');
+            `}).join('');
         }
-
         this.renderMenu();
         this.renderHistory();
+        // Ensure items list is always rendered in the Items section (main admin area)
+        this.renderItems();
+        // Refresh category pick-list and datalist used in the form
+        this.refreshTypeOptions && this.refreshTypeOptions();
     },
 
     renderMenu(search = '', activeCat = null) {
@@ -321,11 +376,31 @@ const app = {
     renderHistory() {
         const list = document.getElementById('invoice-list');
         if(!list) return;
-        list.innerHTML = state.history.map(h => `
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+
+        // Render daily summaries first
+        const summaries = (state.dailySummaries || []).slice().reverse(); // show recent first
+        const summaryHtml = summaries.map(s => `
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-gray-800">${new Date(s.date).toLocaleDateString()}</div>
+                        <div class="text-xs text-gray-500">${s.invoiceCount || 0} bills</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-lg text-green-600">₹${s.totalSales}</div>
+                        <div class="text-xs text-gray-500">${s.totalDishes} dishes</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Render all invoices (most recent first)
+        const invoices = (state.history || []).slice().map(h => h).reverse();
+        const invoicesHtml = invoices.map(h => `
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center mb-2">
                 <div>
                     <div class="font-bold text-gray-800">Bill #${h.id}</div>
-                    <div class="text-xs text-gray-400">${new Date(h.date).toLocaleDateString()}</div>
+                    <div class="text-xs text-gray-400">${new Date(h.date).toLocaleString()}</div>
                 </div>
                 <div class="text-right">
                     <div class="font-bold text-lg text-green-600">₹${h.total}</div>
@@ -333,6 +408,11 @@ const app = {
                 </div>
             </div>
         `).join('');
+
+        list.innerHTML = `
+            <div class="mb-4"><h3 class="text-lg font-bold">Daily Summaries</h3>${summaryHtml || '<div class="text-sm text-gray-500">No daily summaries yet.</div>'}</div>
+            <div class="mt-6"><h3 class="text-lg font-bold">All Bills</h3>${invoicesHtml || '<div class="text-sm text-gray-500">No bills yet.</div>'}</div>
+        `;
     },
 
     handlePrint(items, meta) {
@@ -386,24 +466,39 @@ function saveEndOfDaySummary() {
             return sum;
         }
     }, 0);
-
-    const payload = {
-        action: 'saveDailySummary',
-        date: todayStr,
-        totalSales,
-        totalDishes,
-        history: JSON.stringify(todaysHistory)
+    // Build daily summary object
+    const summary = {
+        date: new Date().toISOString(),
+        totalSales: totalSales,
+        totalDishes: totalDishes,
+        invoiceCount: todaysHistory.length,
     };
 
-    return app.apiCall(payload).then(res => {
-        console.log('End of day summary saved', res);
-        // Clear today's history entries locally to start fresh for the new day
-        state.history = state.history.filter(h => new Date(h.date).toLocaleDateString() !== todayStr);
-        app.renderHistory();
-        app.renderUI();
-    }).catch(err => {
-        console.error('End of day save failed', err);
-    });
+    // Persist locally and upsert: update existing summary for today if present, otherwise append
+    state.dailySummaries = state.dailySummaries || [];
+    const todayKey = new Date().toDateString();
+    const existingIndex = state.dailySummaries.findIndex(s => new Date(s.date).toDateString() === todayKey);
+    if (existingIndex >= 0) {
+        // update existing summary
+        state.dailySummaries[existingIndex] = Object.assign({}, state.dailySummaries[existingIndex], summary);
+    } else {
+        state.dailySummaries.push(summary);
+    }
+    app.persistDailySummaries();
+    app.renderHistory();
+    app.renderUI();
+
+    // Also attempt to send to backend but ignore failures (local copy is authoritative)
+    if (!API_URL.includes('REPLACE')) {
+        const payload = { action: 'saveDailySummary', date: todayStr, totalSales, totalDishes, history: JSON.stringify(todaysHistory) };
+        return app.apiCall(payload).then(res => {
+            console.log('End of day summary saved remotely', res);
+            return res;
+        }).catch(err => {
+            console.warn('End of day remote save failed, local summary persisted', err);
+        });
+    }
+    return Promise.resolve({ status: 'local_saved' });
 }
 
 function scheduleEndOfDaySave() {
@@ -430,9 +525,12 @@ app.renderItems = function() {
     }
     list.innerHTML = state.dishes.map((item, idx) => `
         <div class="bg-white p-3 rounded-xl shadow flex justify-between items-center">
-            <div>
-                <div class="font-bold text-gray-800">${item.name}</div>
-                <div class="text-xs text-gray-400">Code: ${item.code} | ₹${item.price} | ${item.type}</div>
+            <div class="flex items-center gap-3">
+                <img src="${item.image || ''}" alt="${item.name}" class="w-12 h-12 object-cover rounded-md border" onerror="this.style.display='none'" />
+                <div>
+                    <div class="font-bold text-gray-800">${item.name}</div>
+                    <div class="text-xs text-gray-400">Code: ${item.code} | ₹${item.price} | ${item.type}</div>
+                </div>
             </div>
             <div class="flex gap-2">
                 <button class="text-blue-600 hover:underline" onclick="app.editItem(${idx})">Edit</button>
@@ -443,7 +541,12 @@ app.renderItems = function() {
 };
 
 app.addItem = function(item) {
+    // ensure code is numeric and unique; start from 1
+    const maxCode = state.dishes.reduce((m, d) => Math.max(m, parseInt(d.code || '0', 10)), 0);
+    item.code = String(maxCode + 1);
+    // if image is a File object (from upload), convert to data URL (already handled before calling addItem)
     state.dishes.push(item);
+    this.persistItems();
     this.renderItems();
     this.renderUI();
 };
@@ -455,12 +558,16 @@ app.editItem = function(idx) {
     document.getElementById('item-code').value = item.code;
     document.getElementById('item-price').value = item.price;
     document.getElementById('item-type').value = item.type;
-    document.getElementById('item-image').value = item.image || '';
+    const imgInput = document.getElementById('item-image');
+    const preview = document.getElementById('item-image-preview');
+    if (imgInput) imgInput.value = item.image || '';
+    if (preview && item.image) { preview.src = item.image; preview.classList.remove('hidden'); } else if (preview) { preview.src = ''; preview.classList.add('hidden'); }
 };
 
 app.deleteItem = function(idx) {
     if (confirm('Delete this item?')) {
         state.dishes.splice(idx, 1);
+        this.persistItems();
         this.renderItems();
         this.renderUI();
     }
@@ -469,17 +576,25 @@ app.deleteItem = function(idx) {
 app.saveItem = function(e) {
     e.preventDefault();
     const idx = document.getElementById('item-id').value;
+    // Determine category: prefer new input when visible/filled, else select value
+    const typeSelect = document.getElementById('item-type-select');
+    const typeNew = document.getElementById('item-type-new');
+    let chosenType = '';
+    if (typeNew && typeNew.value.trim()) chosenType = typeNew.value.trim();
+    else if (typeSelect && typeSelect.value && typeSelect.value !== '__new') chosenType = typeSelect.value;
+
     const item = {
         name: document.getElementById('item-name').value,
         code: document.getElementById('item-code').value,
         price: parseFloat(document.getElementById('item-price').value),
-        type: document.getElementById('item-type').value,
+        type: chosenType || 'Uncategorized',
         image: document.getElementById('item-image').value
     };
     if (idx === '') {
         this.addItem(item);
     } else {
         state.dishes[idx] = item;
+        this.persistItems();
         this.renderItems();
         this.renderUI();
     }
@@ -499,4 +614,90 @@ window.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = document.getElementById('item-cancel-btn');
     if (cancelBtn) cancelBtn.addEventListener('click', () => app.cancelItemEdit());
     app.renderItems();
+    // Image upload handling + preview and category datalist population
+    const fileInput = document.getElementById('item-image-file');
+    const preview = document.getElementById('item-image-preview');
+    const urlInput = document.getElementById('item-image');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e){
+            const f = e.target.files && e.target.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = function(ev){
+                const dataUrl = ev.target.result;
+                // set preview and set hidden URL input for persistence
+                if (preview) { preview.src = dataUrl; preview.classList.remove('hidden'); }
+                if (urlInput) urlInput.value = dataUrl;
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+
+    // Populate type suggestions and select options from existing items
+    const datalist = document.getElementById('type-suggestions');
+    const typeSelect = document.getElementById('item-type-select');
+    const typeNewInput = document.getElementById('item-type-new');
+
+    app.refreshTypeOptions = function(){
+        const types = Array.from(new Set(state.dishes.map(d => d.type).filter(Boolean)));
+        if(datalist) datalist.innerHTML = types.map(t => `<option value="${t}"></option>`).join('');
+        if(typeSelect){
+            // preserve current selection
+            const cur = typeSelect.value;
+            // remove existing dynamic options (keep first two default options)
+            while(typeSelect.options.length > 2) typeSelect.remove(2);
+            types.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                typeSelect.appendChild(opt);
+            });
+            try { typeSelect.value = cur || (types[0] || ''); } catch(e){}
+        }
+    };
+    app.refreshTypeOptions();
+
+    // When items change, refresh suggestions (wrap existing addItem)
+    const origAddItem = app.addItem.bind(app);
+    app.addItem = function(item){ origAddItem(item); app.refreshTypeOptions(); };
+
+    // Show/hide "new category" input when select chooses Add new
+    if(typeSelect && typeNewInput){
+        typeSelect.addEventListener('change', function(){
+            if(this.value === '__new'){
+                typeNewInput.classList.remove('hidden');
+                typeNewInput.focus();
+            } else {
+                typeNewInput.classList.add('hidden');
+                typeNewInput.value = '';
+            }
+        });
+    }
+
+    // History controls: Run EOD, Export, Import
+    const runEodBtn = document.getElementById('run-eod-btn');
+    const exportBtn = document.getElementById('export-json-btn');
+
+    if (runEodBtn) runEodBtn.addEventListener('click', function(){
+        if (!confirm('Run End of Day summary now? This will append a daily summary based on today\'s invoices.')) return;
+        // call the existing function to compute and persist daily summary
+        saveEndOfDaySummary();
+        alert('End of day summary saved locally.');
+    });
+
+    if (exportBtn) exportBtn.addEventListener('click', function(){
+        const payload = { items: state.dishes || [], invoices: state.history || [], dailySummaries: state.dailySummaries || [] };
+        const dataStr = JSON.stringify(payload, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ganesh-export-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    // import removed per request
 });

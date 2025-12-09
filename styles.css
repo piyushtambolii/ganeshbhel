@@ -8,7 +8,7 @@
   --card-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.6);
   --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  --nav-height: 70px;
+  --nav-height: 78px; /* increased slightly to reduce bottom gap on mobile */
   --safe-area-bottom: env(safe-area-inset-bottom);
 }
 
