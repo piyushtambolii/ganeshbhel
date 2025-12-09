@@ -212,20 +212,14 @@ const app = {
         const panel = document.getElementById('cart-panel');
         if(!panel) return;
         
-        // Check current transform state or class
-        // We use a simple class toggle logic for simplicity if css supports it, 
-        // or direct style manipulation. 
-        // Based on the HTML, it uses translate-y class. 
-        // Let's toggle a 'open' class and handle CSS or just swap classes.
-        
-        if (panel.classList.contains('translate-y-0')) {
-             // Close it (go back to bottom)
-             panel.classList.remove('translate-y-0');
-             panel.classList.add('translate-y-[calc(100%-80px)]');
+        if (panel.classList.contains('cart-open')) {
+             // Close it
+             panel.classList.remove('cart-open');
+             panel.classList.add('cart-closed');
         } else {
              // Open it
-             panel.classList.remove('translate-y-[calc(100%-80px)]');
-             panel.classList.add('translate-y-0');
+             panel.classList.remove('cart-closed');
+             panel.classList.add('cart-open');
         }
     },
     
@@ -349,15 +343,15 @@ const app = {
 
         const grid = document.getElementById('billing-menu-grid');
         grid.innerHTML = filtered.map(d => `
-            <div onclick="app.addToBill('${d.code}')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition group relative overflow-hidden">
+            <div onclick="app.addToBill('${d.code}')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition group relative overflow-hidden active:scale-95">
                 <div class="h-24 mb-2 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
-                    <img src="${d.image}" class="h-16 w-16 object-contain group-hover:scale-110 transition duration-300">
+                    <img src="${d.image}" loading="lazy" class="h-full w-full object-cover group-hover:scale-110 transition duration-300">
                 </div>
                 <div>
-                   <h4 class="font-bold text-gray-800 text-sm truncate">${d.name}</h4>
-                   <div class="flex justify-between items-center mt-1">
-                       <span class="text-xs text-gray-400">#${d.code}</span>
-                       <span class="text-orange-600 font-bold">₹${d.price}</span>
+                   <h4 class="font-bold text-gray-800 text-sm truncate leading-tight">${d.name}</h4>
+                   <div class="flex justify-between items-center mt-2">
+                       <span class="text-[10px] text-gray-400 font-mono tracking-tighter bg-gray-100 px-1.5 py-0.5 rounded">#${d.code}</span>
+                       <span class="text-orange-600 font-bold text-sm">₹${d.price}</span>
                    </div>
                 </div>
                 <div class="absolute inset-0 bg-orange-500/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -376,17 +370,25 @@ const app = {
         else state.currentBill.push({...dish, qty: 1});
         
         this.renderBill();
+        
+        // Auto-open cart on first add (Mobile UX optimization) - optional
+        // if(state.currentBill.length === 1 && window.innerWidth < 768) this.toggleCart(true); 
     },
     
     renderBill() {
         const container = document.getElementById('current-bill-items');
+        // Update both desktop and mobile totals
+        const totalEl = document.getElementById('bill-total-amount');
+        const mobileTotalEl = document.getElementById('mobile-header-total');
+        
         if (state.currentBill.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-gray-400 mt-10">
                     <ion-icon name="cart-outline" class="text-4xl mb-2 text-gray-300"></ion-icon>
                     <p class="text-sm">Order is empty</p>
                 </div>`;
-            document.getElementById('bill-total-amount').textContent = '₹0';
+            if(totalEl) totalEl.textContent = '₹0';
+            if(mobileTotalEl) mobileTotalEl.textContent = '₹0';
             return;
         }
 
@@ -395,20 +397,25 @@ const app = {
             const itemTotal = item.price * item.qty;
             total += itemTotal;
             return `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                <div class="flex justify-between items-center bg-white md:bg-gray-50 p-3 rounded-xl border border-gray-100 md:border-transparent">
                     <div>
                         <div class="font-bold text-sm text-gray-800">${item.name}</div>
                         <div class="text-xs text-gray-400">₹${item.price} x ${item.qty}</div>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex items-center gap-3">
                         <div class="font-bold text-orange-600">₹${itemTotal}</div>
-                        <button onclick="app.removeFromBill(${index})" class="text-red-400 text-xs hover:text-red-600">Remove</button>
+                        <div class="flex items-center gap-2">
+                             <button onclick="event.stopPropagation(); app.removeFromBill(${index})" class="text-red-400 bg-red-50 p-1.5 rounded-lg hover:bg-red-100 transition">
+                                <ion-icon name="trash-outline"></ion-icon>
+                             </button>
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
         
-        document.getElementById('bill-total-amount').textContent = '₹' + total;
+        if(totalEl) totalEl.textContent = '₹' + total;
+        if(mobileTotalEl) mobileTotalEl.textContent = '₹' + total;
     },
 
     removeFromBill(index) {
