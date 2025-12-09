@@ -112,22 +112,26 @@ const app = {
              this.handlePrint(state.currentBill, { id: billNo, total, customer, date: new Date() });
              
                  // 2. Send to Backend
-                 this.apiCall(invoiceData).then(res => {
-                     console.log('Saved to Sheet', res);
-                     // After save, clear bill and reset for next customer
-                     state.currentBill = [];
-                     this.renderBill();
-                     if(custInput) custInput.value = '';
-                     // Focus on billing section for next customer
-                     this.navTo('billing');
-                     // Optionally, focus the search box for speed
-                     setTimeout(() => {
-                         document.getElementById('pos-search')?.focus();
-                     }, 200);
-                 }).catch(err => {
-                     console.error('Save failed', err);
-                     alert('Failed to save invoice. Please try again.');
-                 });
+                this.apiCall(invoiceData).then(res => {
+                    console.log('Saved to Sheet', res);
+                    // Add to local history and update UI
+                    const invoiceObj = { id: billNo, date: new Date().toISOString(), total, customer, items: invoiceData.items };
+                    state.history.unshift(invoiceObj);
+                    this.renderHistory();
+                    // After save, clear bill and reset for next customer
+                    state.currentBill = [];
+                    this.renderBill();
+                    if(custInput) custInput.value = '';
+                    // Focus on billing section for next customer
+                    this.navTo('billing');
+                    // Optionally, focus the search box for speed
+                    setTimeout(() => {
+                        document.getElementById('pos-search')?.focus();
+                    }, 200);
+                }).catch(err => {
+                    console.error('Save failed', err);
+                    alert('Failed to save invoice. Please try again.');
+                });
         });
     },
 
@@ -369,30 +373,51 @@ const app = {
 
 window.addEventListener('DOMContentLoaded', () => app.init());
 
-// --- Auto-save daily summary to Google Sheet ---
-function autoSaveDailySummary() {
-    // Calculate time left in the day
+// --- End-of-day auto-save to Google Sheet ---
+function saveEndOfDaySummary() {
+    const todayStr = new Date().toLocaleDateString();
+    const todaysHistory = state.history.filter(h => new Date(h.date).toLocaleDateString() === todayStr);
+    const totalSales = todaysHistory.reduce((s, h) => s + (parseFloat(h.total) || 0), 0);
+    const totalDishes = todaysHistory.reduce((sum, inv) => {
+        try {
+            const items = inv.items ? (typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items) : [];
+            return sum + items.reduce((a, b) => a + (b.qty || 0), 0);
+        } catch (e) {
+            return sum;
+        }
+    }, 0);
+
+    const payload = {
+        action: 'saveDailySummary',
+        date: todayStr,
+        totalSales,
+        totalDishes,
+        history: JSON.stringify(todaysHistory)
+    };
+
+    return app.apiCall(payload).then(res => {
+        console.log('End of day summary saved', res);
+        // Clear today's history entries locally to start fresh for the new day
+        state.history = state.history.filter(h => new Date(h.date).toLocaleDateString() !== todayStr);
+        app.renderHistory();
+        app.renderUI();
+    }).catch(err => {
+        console.error('End of day save failed', err);
+    });
+}
+
+function scheduleEndOfDaySave() {
     const now = new Date();
-    const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
-    const msUntilNextHour = nextHour - now;
+    // Schedule for a few seconds after midnight to avoid timezone issues
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    const ms = next - now;
     setTimeout(() => {
-        // Prepare summary data
-        const summary = {
-            action: 'saveDailySummary',
-            date: now.toLocaleDateString(),
-            dishes: JSON.stringify(state.dishes),
-            sales: state.history.reduce((acc, curr) => acc + (parseFloat(curr.total)||0), 0)
-        };
-        app.apiCall(summary).then(res => {
-            console.log('Daily summary saved', res);
-        }).catch(err => console.error('Daily summary save failed', err));
-        // Schedule next auto-save
-        autoSaveDailySummary();
-    }, msUntilNextHour);
+        saveEndOfDaySummary().finally(() => scheduleEndOfDaySave());
+    }, ms);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    autoSaveDailySummary();
+    scheduleEndOfDaySave();
 });
 
 // --- Items CRUD Logic ---

@@ -29,6 +29,27 @@
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Ensure print area/menu spacing and safe-area awareness on mobile */
+        :root {
+            --nav-height: 70px;
+            --print-area-height: 84px;
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+        /* print area fixed above bottom nav on mobile, sticky on desktop */
+        .mobile-print-area { position: fixed; left: 0; right: 0; bottom: calc(var(--nav-height) + 10px); z-index: 80; }
+        @media (min-width: 768px) {
+            .mobile-print-area { position: sticky; bottom: 0; left: auto; right: auto; z-index: 10; }
+        }
+        /* Ensure the main content and scrollable lists leave room for the fixed print area + safe inset */
+        #billing-section .overflow-safe,
+        #billing-menu-grid,
+        #current-bill-items {
+            padding-bottom: calc(var(--print-area-height) + 16px + var(--safe-bottom));
+        }
+        /* Ensure bottom nav uses the declared height on small screens */
+        @media (max-width: 767px) {
+            nav[role='navigation'], nav { height: var(--nav-height); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
@@ -150,12 +171,12 @@
                         </div>
                     </div>
                     
-                    <!-- Grid -->
-                    <div class="flex-1 overflow-y-auto p-6">
-                        <div id="billing-menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            <!-- Menu Items -->
+                        <!-- Grid -->
+                        <div class="flex-1 overflow-y-auto p-6 overflow-safe">
+                            <div id="billing-menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <!-- Menu Items -->
+                            </div>
                         </div>
-                    </div>
                 </div>
 
                 <!-- Right: Current Bill -->
@@ -172,7 +193,7 @@
                         </div>
                     </div>
 
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3 fixed left-0 right-0 bottom-0 md:sticky md:left-auto md:right-auto md:bottom-0" style="background: #f9fafb; z-index: 50;">
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3 mobile-print-area" style="background: #f9fafb;">
                          <div class="flex justify-between items-center text-lg font-bold text-gray-900">
                             <span>Total</span>
                             <span id="bill-total-amount">₹0</span>
