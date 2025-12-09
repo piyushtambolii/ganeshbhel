@@ -73,33 +73,6 @@ const app = {
             });
         }
         
-        // Dish Form Submit
-        const dishForm = document.getElementById('dish-form');
-        if (dishForm) {
-            dishForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const dish = {
-                    name: document.getElementById('dish-name').value,
-                    code: document.getElementById('dish-code').value,
-                    price: parseFloat(document.getElementById('dish-price').value),
-                    type: document.getElementById('dish-type').value,
-                    image: document.getElementById('dish-image').value || 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png'
-                };
-                
-                // Add to local state (for now) logic - real app should send to API
-                const existingIdx = state.dishes.findIndex(d => d.code === dish.code);
-                if (existingIdx >= 0) state.dishes[existingIdx] = dish;
-                else state.dishes.push(dish);
-                
-                // PERSIST
-                localStorage.setItem('ganesh_dishes', JSON.stringify(state.dishes));
-
-                alert('Dish Saved!');
-                dishForm.reset();
-                this.renderUI(); // Re-render everything
-            });
-        }
-        
         // Category Filter
         const catContainer = document.getElementById('category-filters');
         if(catContainer) {
@@ -138,15 +111,23 @@ const app = {
              // 1. Direct Print
              this.handlePrint(state.currentBill, { id: billNo, total, customer, date: new Date() });
              
-             // 2. Send to Backend
-             this.apiCall(invoiceData).then(res => {
-                 console.log('Saved to Sheet', res);
-             }).catch(err => console.error('Save failed', err));
-
-             // 3. Clear Logic
-             state.currentBill = [];
-             this.renderBill();
-             if(custInput) custInput.value = '';
+                 // 2. Send to Backend
+                 this.apiCall(invoiceData).then(res => {
+                     console.log('Saved to Sheet', res);
+                     // After save, clear bill and reset for next customer
+                     state.currentBill = [];
+                     this.renderBill();
+                     if(custInput) custInput.value = '';
+                     // Focus on billing section for next customer
+                     this.navTo('billing');
+                     // Optionally, focus the search box for speed
+                     setTimeout(() => {
+                         document.getElementById('pos-search')?.focus();
+                     }, 200);
+                 }).catch(err => {
+                     console.error('Save failed', err);
+                     alert('Failed to save invoice. Please try again.');
+                 });
         });
     },
 
@@ -185,41 +166,12 @@ const app = {
             const data = await res.json();
             state.history = Array.isArray(data) ? data : [];
             
-            // DISHES: Check LocalStorage first to persist edits
-            const localDishes = localStorage.getItem('ganesh_dishes');
-            if (localDishes) {
-                state.dishes = JSON.parse(localDishes);
-                this.renderUI();
-            } else {
-                this.mockData(true); // Populate default if empty
-            }
+            // Still verify dishes from mock or fetching
+            this.mockData(true); // Populate dishes locally for now
             this.renderHistory();
         } catch (e) {
             console.error('Data load error', e);
-            // Fallback
-            const localDishes = localStorage.getItem('ganesh_dishes');
-            if(localDishes) {
-                 state.dishes = JSON.parse(localDishes);
-                 this.renderUI();
-            } else {
-                this.mockData();
-            }
-        }
-    },
-    
-    // Mobile Cart Toggle
-    toggleCart() {
-        const panel = document.getElementById('cart-panel');
-        if(!panel) return;
-        
-        if (panel.classList.contains('cart-open')) {
-             // Close it
-             panel.classList.remove('cart-open');
-             panel.classList.add('cart-closed');
-        } else {
-             // Open it
-             panel.classList.remove('cart-closed');
-             panel.classList.add('cart-open');
+            this.mockData();
         }
     },
     
@@ -242,25 +194,15 @@ const app = {
 
     mockData(onlyDishes = false) {
         state.dishes = [
-            { code: '1', name: 'Bhel Puri', price: 60, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/10/bhel-puri-recipe.jpg' },
-            { code: '2', name: 'Sev Puri', price: 70, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/sev-puri-recipe.jpg' },
-            { code: '3', name: 'Pani Puri', price: 40, type: 'Chaat', image: 'https://vaya.in/recipes/wp-content/uploads/2018/02/Pani-Puri.jpg' },
-            { code: '4', name: 'Masala Puri', price: 50, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2019/11/masala-puri-500x375.jpg' },
-            { code: '5', name: 'Dahi Puri', price: 80, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/08/dahi-puri-recipe.jpg' },
-            { code: '6', name: 'Sukha Bhel', price: 50, type: 'Chaat', image: 'https://www.tarladalal.com/members/9306/big/big_sukha_bhel-14336.jpg' },
-            { code: '7', name: 'Wet Bhel', price: 60, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/10/bhel-puri-recipe.jpg' },
-            { code: '8', name: 'Mumbai Bhel', price: 70, type: 'Chaat', image: 'https://www.cookwithmanali.com/wp-content/uploads/2014/05/Bhel-Puri-500x500.jpg' },
-            { code: '9', name: 'Kolkata Jhal Muri', price: 60, type: 'Chaat', image: 'https://www.archanaskitchen.com/images/archanaskitchen/1-Author/Shaheen_Ali/Jhal_Muri__Kolkata_Street_Food.jpg' },
-            { code: '10', name: 'Churmuri', price: 50, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2022/03/chugum-churmuri-recipe.jpg' },
-            { code: '11', name: 'Ragda Pattice', price: 80, type: 'Hot', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2014/11/ragda-patties-recipe.jpg' },
-            { code: '12', name: 'Aloo Tikki Chaat', price: 70, type: 'Hot', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2014/06/aloo-tikki-chaat-500x375.jpg' },
-            { code: '13', name: 'Samosa Chaat', price: 90, type: 'Hot', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/samosa-chaat-recipe.jpg' },
-            { code: '14', name: 'Kachori Chaat', price: 80, type: 'Hot', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2022/02/khasta-kachori-chaat-recipe.jpg' },
-            { code: '15', name: 'Papdi Chaat', price: 70, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/12/papdi-chaat-recipe.jpg' },
-            { code: '16', name: 'Dahi Bhalla', price: 90, type: 'Chaat', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/09/dahi-vada-recipe.jpg' },
-            { code: '17', name: 'Tokri Basket Chaat', price: 120, type: 'Chaat', image: 'https://files.yummly.com/cc1a2176-7a76-4648-9da3-0b0b8d96333c/4ea4d872-466d-4959-99ce-4277b949a60e.jpg' },
-            { code: '18', name: 'Corn Bhel', price: 70, type: 'Chaat', image: 'https://www.tarladalal.com/members/9306/big/big_corn_bhel-1268.jpg' },
-            { code: '19', name: 'Sprouts Bhel', price: 60, type: 'Healthy', image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2021/03/sprouts-chaat-recipe.jpg' }
+            { code: '101', name: 'Bhel Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+            { code: '102', name: 'Sev Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+            { code: '103', name: 'Pani Puri', price: 40, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/706/706195.png' },
+            { code: '104', name: 'Dahi Puri', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/2619/2619574.png' },
+            { code: '105', name: 'Samosa Chaat', price: 90, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/3014/3014520.png' },
+            { code: '106', name: 'Vada Pav', price: 25, type: 'Hot', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046857.png' },
+            { code: '201', name: 'Masala Chai', price: 20, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/751/751621.png' },
+            { code: '202', name: 'Cold Coffee', price: 50, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' },
+            { code: '203', name: 'Lassi', price: 60, type: 'Beverages', image: 'https://cdn-icons-png.flaticon.com/512/2405/2405479.png' }
         ];
         
         if (!onlyDishes) {
@@ -290,44 +232,6 @@ const app = {
 
         this.renderMenu();
         this.renderHistory();
-        
-        // Render Admin List
-        const adminList = document.getElementById('dishes-list-admin');
-        if (adminList) {
-             adminList.innerHTML = state.dishes.map(d => `
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <img src="${d.image}" class="w-10 h-10 rounded-lg object-cover bg-white">
-                        <div>
-                            <div class="font-bold text-gray-800 text-sm">${d.name}</div>
-                            <div class="text-xs text-gray-500">#${d.code} | ₹${d.price}</div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="app.editDish('${d.code}')" class="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg hover:bg-orange-100">Edit</button>
-                        <button onclick="app.deleteDish('${d.code}')" class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-lg hover:bg-red-100">Delete</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    },
-    
-    deleteDish(code) {
-        if(!confirm('Are you sure you want to delete this item?')) return;
-        state.dishes = state.dishes.filter(d => d.code !== code);
-        localStorage.setItem('ganesh_dishes', JSON.stringify(state.dishes));
-        this.renderUI();
-    },
-
-    editDish(code) {
-        const d = state.dishes.find(x => x.code === code);
-        if(!d) return;
-        document.getElementById('dish-name').value = d.name;
-        document.getElementById('dish-code').value = d.code;
-        document.getElementById('dish-price').value = d.price;
-        document.getElementById('dish-type').value = d.type;
-        document.getElementById('dish-image').value = d.image;
-        document.querySelector('#dishes-section').scrollTop = 0; // consistent scroll
     },
 
     renderMenu(search = '', activeCat = null) {
@@ -343,15 +247,15 @@ const app = {
 
         const grid = document.getElementById('billing-menu-grid');
         grid.innerHTML = filtered.map(d => `
-            <div onclick="app.addToBill('${d.code}')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition group relative overflow-hidden active:scale-95">
+            <div onclick="app.addToBill('${d.code}')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition group relative overflow-hidden">
                 <div class="h-24 mb-2 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
-                    <img src="${d.image}" loading="lazy" class="h-full w-full object-cover group-hover:scale-110 transition duration-300">
+                    <img src="${d.image}" class="h-16 w-16 object-contain group-hover:scale-110 transition duration-300">
                 </div>
                 <div>
-                   <h4 class="font-bold text-gray-800 text-sm truncate leading-tight">${d.name}</h4>
-                   <div class="flex justify-between items-center mt-2">
-                       <span class="text-[10px] text-gray-400 font-mono tracking-tighter bg-gray-100 px-1.5 py-0.5 rounded">#${d.code}</span>
-                       <span class="text-orange-600 font-bold text-sm">₹${d.price}</span>
+                   <h4 class="font-bold text-gray-800 text-sm truncate">${d.name}</h4>
+                   <div class="flex justify-between items-center mt-1">
+                       <span class="text-xs text-gray-400">#${d.code}</span>
+                       <span class="text-orange-600 font-bold">₹${d.price}</span>
                    </div>
                 </div>
                 <div class="absolute inset-0 bg-orange-500/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -370,25 +274,17 @@ const app = {
         else state.currentBill.push({...dish, qty: 1});
         
         this.renderBill();
-        
-        // Auto-open cart on first add (Mobile UX optimization) - optional
-        // if(state.currentBill.length === 1 && window.innerWidth < 768) this.toggleCart(true); 
     },
     
     renderBill() {
         const container = document.getElementById('current-bill-items');
-        // Update both desktop and mobile totals
-        const totalEl = document.getElementById('bill-total-amount');
-        const mobileTotalEl = document.getElementById('mobile-header-total');
-        
         if (state.currentBill.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-gray-400 mt-10">
                     <ion-icon name="cart-outline" class="text-4xl mb-2 text-gray-300"></ion-icon>
                     <p class="text-sm">Order is empty</p>
                 </div>`;
-            if(totalEl) totalEl.textContent = '₹0';
-            if(mobileTotalEl) mobileTotalEl.textContent = '₹0';
+            document.getElementById('bill-total-amount').textContent = '₹0';
             return;
         }
 
@@ -397,25 +293,20 @@ const app = {
             const itemTotal = item.price * item.qty;
             total += itemTotal;
             return `
-                <div class="flex justify-between items-center bg-white md:bg-gray-50 p-3 rounded-xl border border-gray-100 md:border-transparent">
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
                     <div>
                         <div class="font-bold text-sm text-gray-800">${item.name}</div>
                         <div class="text-xs text-gray-400">₹${item.price} x ${item.qty}</div>
                     </div>
-                    <div class="text-right flex items-center gap-3">
+                    <div class="text-right">
                         <div class="font-bold text-orange-600">₹${itemTotal}</div>
-                        <div class="flex items-center gap-2">
-                             <button onclick="event.stopPropagation(); app.removeFromBill(${index})" class="text-red-400 bg-red-50 p-1.5 rounded-lg hover:bg-red-100 transition">
-                                <ion-icon name="trash-outline"></ion-icon>
-                             </button>
-                        </div>
+                        <button onclick="app.removeFromBill(${index})" class="text-red-400 text-xs hover:text-red-600">Remove</button>
                     </div>
                 </div>
             `;
         }).join('');
         
-        if(totalEl) totalEl.textContent = '₹' + total;
-        if(mobileTotalEl) mobileTotalEl.textContent = '₹' + total;
+        document.getElementById('bill-total-amount').textContent = '₹' + total;
     },
 
     removeFromBill(index) {
@@ -441,100 +332,120 @@ const app = {
     },
 
     handlePrint(items, meta) {
-        // Open a completely new window for the print job
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        // Define clean print styles (Aadhar/Receipt style)
+        const printWindow = window.open('', '_blank');
         const style = `
-            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-            body { 
-                font-family: 'Roboto', sans-serif; 
-                padding: 40px; 
-                margin: 0; 
-                color: #333;
-            }
-            .container {
-                max-width: 80mm; /* Standard Thermal Width or adjust for A4 */
-                margin: 0 auto;
-                border: 1px solid #ddd;
-                padding: 20px;
-                text-align: center;
-            }
-            h3 { margin: 0; color: #E65100; font-size: 24px; text-transform: uppercase; }
-            .meta { font-size: 12px; margin-bottom: 15px; color: #666; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
-            .row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
-            .item-name { text-align: left; font-weight: 500; }
-            .total { 
-                margin-top: 15px; 
-                padding-top: 10px; 
-                border-top: 2px solid #333; 
-                font-weight: 700; 
-                font-size: 18px; 
-                display: flex; 
-                justify-content: space-between;
-            }
-            .footer { margin-top: 20px; font-size: 10px; color: #888; }
-            @media print {
-                body { padding: 0; }
-                .container { border: none; width: 100%; max-width: 100%; }
-            }
+            body { font-family: monospace; padding: 20px; text-align: center; }
+            .row { display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding: 5px 0; }
+            .total { font-weight: bold; font-size: 1.2em; border-top: 1px dashed #000; margin-top: 10px; padding-top: 10px; }
         `;
-
         const itemRows = items.map(i => `
             <div class="row">
-                <span class="item-name">${i.name} <span style="font-size:0.8em; color:#666;">x${i.qty}</span></span>
-                <span>₹${i.qty * i.price}</span>
+                <span>${i.qty} x ${i.name}</span>
+                <span>${i.qty * i.price}</span>
             </div>
         `).join('');
 
-        const content = `
+        printWindow.document.write(`
             <html>
-            <head>
-                <title>Print Invoice - Ganesh Bhel</title>
-                <style>${style}</style>
-            </head>
+            <head><style>${style}</style></head>
             <body>
-                <div class="container">
-                    <h3>Ganesh Bhel</h3>
-                    <div style="font-size:12px; margin-bottom:10px;">Premium Chaat & Snacks</div>
-                    
-                    <div class="meta">
-                        <div>Bill No: ${meta.id}</div>
-                        <div>Date: ${meta.date.toLocaleString()}</div>
-                        <div>Customer: ${meta.customer}</div>
-                    </div>
-
-                    <div style="text-align:left;">
-                        ${itemRows}
-                    </div>
-
-                    <div class="total">
-                        <span>TOTAL PAYABLE</span>
-                        <span>₹${meta.total}</span>
-                    </div>
-
-                    <div class="footer">
-                        <p>Thank you for visiting!</p>
-                        <p>For Franchise Enquiry: franchise@ganeshbhel.com</p>
-                    </div>
+                <h3>GANESH BHEL</h3>
+                <p>${meta.date.toLocaleString()}</p>
+                <div style="text-align:left; margin-top:20px;">
+                    ${itemRows}
                 </div>
-                <script>
-                    window.onload = function() {
-                        window.focus();
-                        setTimeout(() => { 
-                            window.print(); 
-                            // Optional: Close after print (delayed to allow dialog to open)
-                            // window.close(); 
-                        }, 500);
-                    };
-                </script>
+                <div class="row total">
+                    <span>TOTAL</span>
+                    <span>₹${meta.total}</span>
+                </div>
+                <p style="margin-top:20px;">Thank You!</p>
+                <script>window.print(); window.close();<\/script>
             </body>
             </html>
-        `;
-
-        printWindow.document.write(content);
+        `);
         printWindow.document.close();
     }
 };
 
 window.addEventListener('DOMContentLoaded', () => app.init());
+
+// --- Items CRUD Logic ---
+app.renderItems = function() {
+    const list = document.getElementById('items-list');
+    if (!list) return;
+    if (state.dishes.length === 0) {
+        list.innerHTML = '<div class="text-gray-400">No items found.</div>';
+        return;
+    }
+    list.innerHTML = state.dishes.map((item, idx) => `
+        <div class="bg-white p-3 rounded-xl shadow flex justify-between items-center">
+            <div>
+                <div class="font-bold text-gray-800">${item.name}</div>
+                <div class="text-xs text-gray-400">Code: ${item.code} | ₹${item.price} | ${item.type}</div>
+            </div>
+            <div class="flex gap-2">
+                <button class="text-blue-600 hover:underline" onclick="app.editItem(${idx})">Edit</button>
+                <button class="text-red-600 hover:underline" onclick="app.deleteItem(${idx})">Delete</button>
+            </div>
+        </div>
+    `).join('');
+};
+
+app.addItem = function(item) {
+    state.dishes.push(item);
+    this.renderItems();
+    this.renderUI();
+};
+
+app.editItem = function(idx) {
+    const item = state.dishes[idx];
+    document.getElementById('item-id').value = idx;
+    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-code').value = item.code;
+    document.getElementById('item-price').value = item.price;
+    document.getElementById('item-type').value = item.type;
+    document.getElementById('item-image').value = item.image || '';
+};
+
+app.deleteItem = function(idx) {
+    if (confirm('Delete this item?')) {
+        state.dishes.splice(idx, 1);
+        this.renderItems();
+        this.renderUI();
+    }
+};
+
+app.saveItem = function(e) {
+    e.preventDefault();
+    const idx = document.getElementById('item-id').value;
+    const item = {
+        name: document.getElementById('item-name').value,
+        code: document.getElementById('item-code').value,
+        price: parseFloat(document.getElementById('item-price').value),
+        type: document.getElementById('item-type').value,
+        image: document.getElementById('item-image').value
+    };
+    if (idx === '') {
+        this.addItem(item);
+    } else {
+        state.dishes[idx] = item;
+        this.renderItems();
+        this.renderUI();
+    }
+    document.getElementById('item-form').reset();
+    document.getElementById('item-id').value = '';
+};
+
+app.cancelItemEdit = function() {
+    document.getElementById('item-form').reset();
+    document.getElementById('item-id').value = '';
+};
+
+// Bind item form events after DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('item-form');
+    if (form) form.addEventListener('submit', (e) => app.saveItem(e));
+    const cancelBtn = document.getElementById('item-cancel-btn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => app.cancelItemEdit());
+    app.renderItems();
+});
