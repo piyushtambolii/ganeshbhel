@@ -1,269 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <title>Ganesh Bhel - Inventory & Billing</title>
-    <link rel="manifest" href="manifest.json" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="styles.css" />
-    <!-- Ionicons -->
-    <script
-      type="module"
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
-    ></script>
-    <!-- PDF libraries removed — printing is direct to thermal printer -->
-  </head>
-  <body>
-    <!-- App Container -->
-    <div id="app">
-      <!-- Notifications -->
-      <div id="notification-area"></div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ganesh Bhel - Premium</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        primary: '#FF5722', // Deep Orange
+                        secondary: '#FF8A65',
+                        dark: '#1F2937',
+                        light: '#F3F4F6'
+                    }
+                }
+            }
+        }
+    </script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
 
-      <!-- Login Screen -->
-      <section id="login-screen" class="screen active">
-        <div class="login-container glass-card">
-          <div class="logo-area">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
-              alt="Ganesh Bhel Logo"
-              class="app-logo"
-            />
-            <h1>Ganesh Bhel</h1>
-            <p>Inventory & Billing System</p>
-          </div>
-          <form id="login-form">
-            <div class="input-group">
-              <ion-icon name="mail-outline"></ion-icon>
-              <input
-                type="email"
-                id="email"
-                placeholder="Email"
-                required
-                value="franchise1@shop.com"
-              />
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 hidden">
+        <div class="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+            <div class="mb-6">
+                <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl text-orange-600">
+                    <ion-icon name="fast-food"></ion-icon>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Ganesh Bhel</h1>
+                <p class="text-gray-500 text-sm">Staff Login</p>
             </div>
-            <div class="input-group">
-              <ion-icon name="lock-closed-outline"></ion-icon>
-              <input
-                type="password"
-                id="password"
-                placeholder="Password"
-                required
-                value="fran123"
-              />
-            </div>
-            <button type="submit" class="btn-primary">
-              Sign In <ion-icon name="arrow-forward-outline"></ion-icon>
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <!-- Main Layout (Hidden until logged in) -->
-      <div id="main-layout" class="hidden">
-        <!-- Header -->
-        <header class="app-header glass-header">
-          <div class="header-left">
-            <h2 id="page-title">Dashboard</h2>
-          </div>
-          <div class="header-right">
-            <button id="logout-btn" class="icon-btn">
-              <ion-icon name="log-out-outline"></ion-icon>
-            </button>
-          </div>
-        </header>
-
-        <!-- Content Area -->
-        <main id="content-area">
-          <!-- Dashboard Section -->
-          <section id="dashboard-section" class="page-section active">
-            <div class="stats-grid">
-              <div class="stat-card glass-card">
-                <div class="icon-box orange">
-                  <ion-icon name="fast-food-outline"></ion-icon>
+            <form id="login-form" class="space-y-4">
+                <div class="text-left">
+                     <label class="text-xs font-semibold text-gray-600 ml-1">Email</label>
+                    <input type="email" id="email" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition" placeholder="Email" value="franchise1@shop.com">
                 </div>
-                <div class="stat-info">
-                  <h3>Total Dishes</h3>
-                  <p id="dash-dishes-count">0</p>
+               <div class="text-left">
+                     <label class="text-xs font-semibold text-gray-600 ml-1">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition" placeholder="Password" value="fran123">
                 </div>
-              </div>
-
-              <div class="stat-card glass-card">
-                <div class="icon-box blue">
-                  <ion-icon name="receipt-outline"></ion-icon>
-                </div>
-                <div class="stat-info">
-                  <h3>Today's Bills</h3>
-                  <p id="dash-bills-count">0</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="quick-actions">
-              <h3>Quick Actions</h3>
-              <div class="action-buttons">
-                <button class="action-btn" onclick="app.navTo('billing')">
-                  <ion-icon name="add-circle"></ion-icon> New Bill
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-95 transition">
+                    Sign In
                 </button>
-
-              </div>
-            </div>
-          </section>
-
-
-
-          <!-- Dishes Section -->
-          <section id="dishes-section" class="page-section">
-            <div class="glass-card form-card">
-              <h3>Add New Dish</h3>
-              <form id="dish-form">
-                <div class="row">
-                  <input
-                    type="text"
-                    id="dish-name"
-                    placeholder="Dish Name (e.g., Bhel Puri)"
-                    required
-                  />
-                  <input
-                    type="text"
-                    id="dish-code"
-                    placeholder="Item Code (e.g., 101)"
-                    required
-                  />
-                </div>
-                <div class="row">
-                  <input
-                    type="number"
-                    id="dish-price"
-                    placeholder="Price (₹)"
-                    required
-                  />
-                  <input
-                    type="text"
-                    id="dish-type"
-                    placeholder="Type (e.g., Chaat, Beverages)"
-                    required
-                    list="type-suggestions"
-                  />
-                  <datalist id="type-suggestions">
-                    <option value="Chaat"></option>
-                    <option value="Beverages"></option>
-                    <option value="Snacks"></option>
-                  </datalist>
-                </div>
-                 <div class="row">
-                    <input
-                    type="text"
-                    id="dish-subtype"
-                    placeholder="Subtype (e.g., Dry, Wet, Hot)"
-                  />
-                 </div>
-                
-                <button type="submit" class="btn-primary full-width">Save / Update Item</button>
-              </form>
-            </div>
-
-            <div class="list-container">
-              <h3>Menu</h3>
-              <div id="dishes-list" class="item-list">
-                <!-- Items populated here -->
-                <div class="loading">Loading dishes...</div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Billing Section -->
-          <section id="billing-section" class="page-section">
-            <div class="glass-card billing-card">
-              <!-- POS Header -->
-              <div class="pos-header">
-                  <div class="search-bar">
-                      <ion-icon name="search-outline"></ion-icon>
-                      <input type="text" id="pos-search" placeholder="Search Item or Code..." autocomplete="off">
-                  </div>
-                  <input type="text" id="cust-name-opt" placeholder="Customer Name (Optional)" style="margin-bottom:10px; font-size: 0.9rem; padding: 8px;">
-              </div>
-
-              <!-- Categories -->
-              <div id="category-filters" class="category-tabs">
-                  <!-- Populated by JS -->
-                  <div class="loading">Loading...</div>
-              </div>
-              <!-- Subcategories (populated when a Type is active) -->
-              <div id="subcategory-filters" class="category-tabs" style="margin-top:8px;">
-                <!-- Populated by JS -->
-              </div>
-              
-              <!-- Menu Grid -->
-              <div id="billing-menu-grid" class="menu-grid">
-                <div class="loading">Loading menu...</div>
-              </div>
-
-              <!-- Bill List -->
-              <div id="current-bill-items" class="bill-list">
-                <p class="empty-msg">No items added to bill.</p>
-              </div>
-
-              <div class="bill-total">
-                <span>Total:</span>
-                <span id="bill-total-amount">₹0</span>
-              </div>
-              <button id="create-invoice-btn" class="btn-primary full-width">
-                Generate Invoice
-              </button>
-            </div>
-          </section>
-
-
-          
-          <!-- Hidden Thermograph Receipt Area -->
-          <div id="receipt-summary-area" class="hidden-print">
-             <div id="receipt-print-area"></div>
-          </div>
-
-          <!-- History Section -->
-          <section id="history-section" class="page-section">
-            <h3>Invoice History</h3>
-            <div id="invoice-list" class="item-list">
-              <div class="loading">Loading history...</div>
-            </div>
-          </section>
-        </main>
-
-        <!-- Bottom Navigation -->
-        <nav class="bottom-nav">
-          <a href="#" class="nav-item active" data-target="dashboard">
-            <ion-icon name="grid-outline"></ion-icon>
-            <span>Home</span>
-          </a>
-
-          <a href="#" class="nav-item" data-target="dishes">
-            <ion-icon name="restaurant-outline"></ion-icon>
-            <span>Menu</span>
-          </a>
-          <a href="#" class="nav-item" data-target="billing">
-            <ion-icon name="receipt-outline"></ion-icon>
-            <span>Bill</span>
-          </a>
-          <a href="#" class="nav-item" data-target="history">
-            <ion-icon name="time-outline"></ion-icon>
-            <span>History</span>
-          </a>
-        </nav>
-      </div>
+            </form>
+        </div>
     </div>
 
+    <!-- Main App Layout -->
+    <div id="main-layout" class="flex-1 flex flex-col h-full md:flex-row overflow-hidden relative">
+        
+        <!-- Sidebar (Desktop) / Bottom Nav (Mobile) -->
+        <nav class="md:w-24 bg-white border-r border-gray-200 flex md:flex-col justify-between items-center py-4 md:py-8 fixed bottom-0 w-full md:relative md:h-full z-40 shadow-top md:shadow-none glass">
+             <div class="hidden md:flex flex-col items-center gap-1 mb-8">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 text-xl font-bold">GB</div>
+            </div>
+            
+            <div class="flex md:flex-col justify-around w-full md:w-auto gap-4 md:gap-8 text-2xl text-gray-400">
+                <a href="#" data-target="dashboard" class="nav-item active p-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition flex flex-col items-center gap-1">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    <span class="text-[10px] font-medium md:hidden">Home</span>
+                </a>
+                <a href="#" data-target="billing" class="nav-item p-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition flex flex-col items-center gap-1">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span class="text-[10px] font-medium md:hidden">Bill</span>
+                </a>
+                <a href="#" data-target="history" class="nav-item p-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition flex flex-col items-center gap-1">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span class="text-[10px] font-medium md:hidden">History</span>
+                </a>
+            </div>
+
+            <div class="hidden md:block">
+                 <button id="logout-btn" class="p-3 text-red-500 hover:bg-red-50 rounded-xl transition">
+                    <ion-icon name="log-out-outline"></ion-icon>
+                 </button>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="flex-1 h-full overflow-hidden flex flex-col bg-gray-50 pb-20 md:pb-0">
+            <!-- Header -->
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+                <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                <div class="text-sm text-gray-500" id="user-display">Franchise 1</div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="page-section p-6 h-full overflow-y-auto">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mb-3">
+                            <ion-icon name="fast-food"></ion-icon>
+                        </div>
+                        <h3 class="text-gray-500 text-sm font-medium">Total Dishes</h3>
+                        <p class="text-2xl font-bold text-gray-900" id="dash-dishes-count">0</p>
+                    </div>
+                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl mb-3">
+                            <ion-icon name="cash-outline"></ion-icon>
+                        </div>
+                        <h3 class="text-gray-500 text-sm font-medium">Today's Sales</h3>
+                        <p class="text-2xl font-bold text-gray-900">₹<span id="dash-sales-total">0</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-500 to-red-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg mb-8">
+                    <div class="relative z-10">
+                        <h2 class="text-3xl font-bold mb-2">Start Billing</h2>
+                        <p class="text-orange-100 mb-6 max-w-sm">Create instant bills for customers. Fast, reliable, and directly printed.</p>
+                        <button onclick="app.navTo('billing')" class="bg-white text-orange-600 px-8 py-3 rounded-xl font-bold shadow-md hover:bg-gray-50 transition">
+                            Open POS
+                        </button>
+                    </div>
+                    <!-- Decorative circles -->
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+                    <div class="absolute right-20 -top-10 w-20 h-20 bg-white opacity-10 rounded-full blur-xl"></div>
+                </div>
+            </section>
+
+            <!-- Billing / POS Section -->
+            <section id="billing-section" class="page-section hidden h-full flex flex-col md:flex-row">
+                <!-- Left: Menu Grid -->
+                <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200">
+                    <!-- Search & Filter -->
+                    <div class="p-6 bg-white border-b border-gray-200 space-y-4">
+                        <div class="relative">
+                            <ion-icon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></ion-icon>
+                            <input type="text" id="pos-search" class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 transition" placeholder="Search dish name or code...">
+                        </div>
+                        <div class="flex gap-2 overflow-x-auto hide-scrollbar" id="category-filters">
+                             <!-- Categories injected here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Grid -->
+                    <div class="flex-1 overflow-y-auto p-6">
+                        <div id="billing-menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <!-- Menu Items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Current Bill -->
+                <div class="w-full md:w-96 bg-white flex flex-col h-[50vh] md:h-full shadow-xl z-20">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50">
+                        <h3 class="font-bold text-gray-800">Current Order</h3>
+                        <p class="text-xs text-gray-500" id="bill-date">--</p>
+                    </div>
+                    
+                    <div id="current-bill-items" class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div class="text-center text-gray-400 mt-10">
+                            <ion-icon name="cart-outline" class="text-4xl mb-2 text-gray-300"></ion-icon>
+                            <p class="text-sm">Order is empty</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3">
+                         <div class="flex justify-between items-center text-lg font-bold text-gray-900">
+                            <span>Total</span>
+                            <span id="bill-total-amount">₹0</span>
+                        </div>
+                         <div>
+                            <input type="text" id="cust-name-opt" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" placeholder="Customer Name (Optional)">
+                        </div>
+                        <button id="create-invoice-btn" class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition group">
+                            <ion-icon name="print-outline" class="text-xl group-hover:animate-pulse"></ion-icon>
+                            Print Receipt
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+             <!-- History/History Section -->
+            <section id="history-section" class="page-section hidden p-6 h-full overflow-y-auto">
+                <div class="space-y-4" id="invoice-list">
+                    <!-- History Items -->
+                </div>
+            </section>
+             <section id="dishes-section" class="page-section hidden p-6 h-full overflow-y-auto">
+                <div class="space-y-4" id="dishes-list">
+                    <!-- History Items -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
     <script src="script.js"></script>
-  </body>
+</body>
 </html>

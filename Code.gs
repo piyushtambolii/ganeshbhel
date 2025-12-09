@@ -1,103 +1,77 @@
+// Google Apps Script Code
+// 1. Create a new Google Sheet.
+// 2. Go to Extensions > Apps Script.
+// 3. Paste this code into Code.gs
+// 4. Run 'setupSheet' function once to create headers.
+// 5. Deploy as Web App:
+//    - Description: "v1"
+//    - Execute as: "Me"
+//    - Who has access: "Anyone"
+// 6. Copy the URL and paste it into script.js API_URL
+
 function doGet(e) {
-  const action = e.parameter.action;
-  
-  if (action === 'getInventory') {
-    return ContentService.createTextOutput(JSON.stringify(getInventory())).setMimeType(ContentService.MimeType.JSON);
-  } else if (action === 'getDishes') {
-    return ContentService.createTextOutput(JSON.stringify(getDishes())).setMimeType(ContentService.MimeType.JSON);
-  } else if (action === 'getHistory') {
-     return ContentService.createTextOutput(JSON.stringify(getHistory())).setMimeType(ContentService.MimeType.JSON);
-  } else if(action === 'addInventory') {
-     addInventory(e.parameter);
-     return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
-  } else if(action === 'addDish') {
-     addDish(e.parameter);
-     return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
-  } else if(action === 'createInvoice') {
-     createInvoice(e.parameter);
-     return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  return ContentService.createTextOutput("Ganesh Bhel API Active");
+  return handleRequest(e);
 }
 
-function getSheet(name) {
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  const lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
+  try {
+    const action = e.parameter.action;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+    
+    if (action === 'createInvoice') {
+      const data = JSON.parse(e.parameter.items); // Array of items
+      const billNo = e.parameter.id;
+      const customer = e.parameter.customerName;
+      const total = e.parameter.total;
+      const date = new Date().toLocaleString();
+      
+      // Store plain row: [Date, BillNo, Customer, Items_Summary, Total]
+      const itemsSummary = data.map(i => `${i.name} (${i.qty})`).join(', ');
+      
+      sheet.appendRow([date, billNo, customer, itemsSummary, total]);
+      
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', row: sheet.getLastRow() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (action === 'getHistory') {
+       const rows = sheet.getDataRange().getValues();
+       const headers = rows.shift();
+       const history = rows.map((r, i) => ({
+         date: r[0],
+         id: r[1],
+         customer: r[2],
+         items: r[3],
+         total: r[4]
+       })).reverse().slice(0, 20); // Last 20
+       
+       return ContentService.createTextOutput(JSON.stringify(history))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unknown action' }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(name);
+  let sheet = ss.getSheetByName('Orders');
   if (!sheet) {
-    sheet = ss.insertSheet(name);
-    // Init headers if new
-    if(name === 'Inventory') sheet.appendRow(['Name', 'Qty', 'Unit', 'Cost', 'Price']);
-    if(name === 'Dishes') sheet.appendRow(['Name', 'Price', 'IngredientsJSON']);
-    if(name === 'Invoices') sheet.appendRow(['ID', 'Customer', 'Mobile', 'Date', 'Total', 'ItemsJSON']);
+    sheet = ss.insertSheet('Orders');
+    sheet.appendRow(['Date', 'Bill No', 'Customer Name', 'Items', 'Total Amount']);
   }
-  return sheet;
-}
-
-function getInventory() {
-  const sheet = getSheet('Inventory');
-  const data = sheet.getDataRange().getValues();
-  const headers = data.shift();
-  return data.map(row => ({ name: row[0], qty: row[1], unit: row[2], cost: row[3], price: row[4] }));
-}
-
-function getDishes() {
-  const sheet = getSheet('Dishes');
-  const data = sheet.getDataRange().getValues();
-  const headers = data.shift();
-  return data.map(row => ({ name: row[0], price: row[1], ingredients: row[2] })); // ingredients stored as JSON string
-}
-
-function getHistory() {
-   const sheet = getSheet('Invoices');
-   const data = sheet.getDataRange().getValues();
-   const headers = data.shift();
-   // Return last 20
-   return data.slice(-20).reverse().map(row => ({
-       id: row[0], customerName: row[1], date: row[3], total: row[4]
-   }));
-}
-
-function addInventory(params) {
-  const sheet = getSheet('Inventory');
-  sheet.appendRow([params.name, params.qty, params.unit, params.cost, params.price]);
-}
-
-function addDish(params) {
-  const sheet = getSheet('Dishes');
-  sheet.appendRow([params.name, params.price, params.ingredients]);
-}
-
-function createInvoice(params) {
-  const sheet = getSheet('Invoices');
-  const id = Utilities.getUuid();
-  sheet.appendRow([id, params.customerName, params.customerMobile, params.date, params.total, params.items]);
-  
-  // Deduct Stock
-  const items = JSON.parse(params.items);
-  const dishSheet = getSheet('Dishes');
-  const dishes = getDishes();
-  const invSheet = getSheet('Inventory');
-  const invData = invSheet.getDataRange().getValues();
-  
-  items.forEach(billItem => {
-      // Find dish ingredients
-      const dishObj = dishes.find(d => d.name === billItem.name);
-      if(dishObj && dishObj.ingredients) {
-          const ingredients = JSON.parse(dishObj.ingredients);
-          ingredients.forEach(ing => {
-               // Reduce inv stock
-               // Find row in inventory
-               for(let i=1; i<invData.length; i++) {
-                   if(invData[i][0] === ing.item) {
-                       const deduction = ing.qty * billItem.qty;
-                       const currentQty = invData[i][1];
-                       const newQty = currentQty - deduction;
-                       invSheet.getRange(i+1, 2).setValue(newQty);
-                       break;
-                   }
-               }
-          });
-      }
-  });
 }
