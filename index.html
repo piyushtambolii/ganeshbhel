@@ -60,6 +60,7 @@
         /* Print Containers */
         .print-only { display: none; }
         @media print {
+            body { background-color: white !important; color: black !important; }
             /* Hide all direct children of body except print containers */
             body > *:not(.print-only) { display: none !important; }
             
@@ -71,10 +72,17 @@
                 top: 0; 
                 width: 100%; 
                 visibility: visible;
-                background: white;
+                background-color: white !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact; 
             }
-            /* Explicitly ensure children are visible */
-            .print-only * { visibility: visible; }
+            /* Explicitly ensure children are visible and correct color */
+            .print-only * { 
+                visibility: visible; 
+                background-color: white !important;
+                color: black !important;
+            }
         }
         /* --- end changed code --- */
     </style>

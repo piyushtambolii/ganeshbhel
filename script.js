@@ -250,7 +250,7 @@ const app = {
         
         const item = state.dishes.find(d => d.code === code);
         if (item) {
-            this.addItemToOrder(item, qty);
+            this.updateItemQtyByCode(item.code, qty);
             // Reset for next
             codeInput.value = '';
             qtyInput.value = '1';
@@ -593,7 +593,7 @@ const app = {
                              <button onclick="app.updateItemQtyByCode('${d.code}', -1)" class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center active:bg-orange-700 transition">
                                 <ion-icon name="remove"></ion-icon>
                             </button>
-                            <span class="font-bold text-white text-sm">${qty}</span>
+                            <input type="tel" value="${qty}" class="w-8 text-center bg-transparent text-white font-bold text-sm outline-none" onclick="event.stopPropagation()" onchange="app.setItemQty('${d.code}', this.value)">
                             <button onclick="app.updateItemQtyByCode('${d.code}', 1)" class="w-8 h-8 rounded-lg bg-white text-orange-600 flex items-center justify-center active:bg-gray-100 transition shadow-sm">
                                 <ion-icon name="add"></ion-icon>
                             </button>
@@ -630,6 +630,32 @@ const app = {
         // Save to DB immediately (debounced ideally, but direct for now)
         await this.saveCurrentOrder();
         
+        this.renderBill();
+        this.renderMenu(document.getElementById('pos-search')?.value);
+    },
+
+    async setItemQty(code, qtyVal) {
+        let newQty = parseInt(qtyVal);
+        if (isNaN(newQty) || newQty < 0) newQty = 0;
+        
+        if (!state.activeTable) await this.selectTable('Quick');
+        
+        let items = state.currentOrder.items || [];
+        const index = items.findIndex(i => i.code === code);
+        
+        if (index >= 0) {
+            if (newQty <= 0) items.splice(index, 1);
+            else items[index].qty = newQty;
+        } else if (newQty > 0) {
+             const dish = state.dishes.find(d => d.code === code);
+             if(dish) items.push({...dish, qty: newQty});
+        }
+        
+        state.currentOrder.items = items;
+        const net = items.reduce((s, i) => s + (i.price * i.qty), 0);
+        state.currentOrder.totals = { amount: net, net: net };
+        
+        await this.saveCurrentOrder();
         this.renderBill();
         this.renderMenu(document.getElementById('pos-search')?.value);
     },
