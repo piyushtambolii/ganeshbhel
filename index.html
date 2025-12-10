@@ -66,33 +66,37 @@
                 color: black !important; 
                 color-scheme: light;
             }
-            /* Hide all direct children of body except print containers */
-            body > *:not(.print-only) { display: none !important; }
             
-            /* Show print container and ensure visibility */
-            body .print-only { 
-                display: block !important; 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                min-height: 100vh;
-                visibility: visible;
+            /* Hide everything by default using visibility */
+            body * {
+                visibility: hidden;
+                /* Avoid layout shifts that might collapse the page height too much, 
+                   but we usually want to remove them from flow? 
+                   If we use visibility, the page keeps scroll height. 
+                   Let's try visibility approach as 'display' was failing. */
+            }
+            
+            /* Show print container */
+            .print-only, .print-only * {
+                visibility: visible !important;
+            }
+            
+            .print-only {
+                display: block !important;
+                position: fixed; /* Fixed places it relative to the page view/paper */
+                left: 0;
+                top: 0;
+                width: 100%;
+                min-height: 100vh; /* Ensure it fills height */
+                z-index: 9999;
+                
                 background-color: #ffffff !important;
                 color: #000000 !important;
+                
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact; 
                 filter: none !important;
                 -webkit-filter: none !important;
-            }
-            /* Explicitly ensure children are visible and correct color */
-            .print-only * { 
-                visibility: visible; 
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                filter: none !important;
-                box-shadow: none !important;
-                text-shadow: none !important;
             }
         }
         /* --- end changed code --- */
