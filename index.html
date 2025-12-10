@@ -178,36 +178,33 @@
                 <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200 billing-menu">
                     <!-- Search & Filter -->
                     <div class="p-6 bg-white border-b border-gray-200 space-y-4">
-                        <!-- Compact Header: Tables + Fast Add -->
-                        <div class="mb-4">
-                            <div class="flex justify-between items-center mb-2">
-                                <button id="toggle-tables-btn" class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1 hover:text-orange-600 transition">
-                                    <span>Select Table</span>
-                                    <ion-icon name="chevron-down-outline" id="table-toggle-icon" class="text-sm transition-transform"></ion-icon>
-                                </button>
-                                <span class="text-xs font-bold text-orange-600" id="active-table-label">No Table Selected</span>
-                            </div>
-                            
-                            <!-- Expandable Table Area -->
-                            <div id="table-selector-container" class="bg-gray-50 p-2 rounded-2xl border border-gray-100 hidden mb-2 transition-all">
-                                <div class="flex flex-wrap gap-2 justify-center" id="table-selector">
-                                    <!-- Tables 1-15 injected by JS -->
+                            <!-- Collapsible Header: Table & Fast Add -->
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="app.toggleCollapse('table-selector-wrapper', 'table-select-icon')">
+                                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer">Select Table & Add Item</label>
+                                    <ion-icon name="chevron-down-outline" id="table-select-icon" class="text-gray-500 text-lg transition-transform transform rotate-180"></ion-icon>
+                                </div>
+                                <div id="table-selector-wrapper" class="transition-all duration-300 overflow-hidden">
+                                    <div class="flex gap-3 items-center bg-gray-50 p-2 rounded-2xl border border-gray-100">
+                                        <!-- Tables (Scrollable) -->
+                                        <div class="flex-1 overflow-x-auto hide-scrollbar flex gap-2" id="table-selector">
+                                            <!-- Tables 1-15 injected by JS -->
+                                        </div>
+                                        
+                                        <!-- Divider -->
+                                        <div class="w-px h-8 bg-gray-300"></div>
+                                        
+                                        <!-- Compact Fast Add -->
+                                        <div class="flex gap-1 shrink-0">
+                                            <input type="number" id="fast-code" class="w-14 px-1 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Code">
+                                            <input type="number" id="fast-qty" class="w-12 px-1 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Qty" value="1">
+                                            <button id="btn-fast-add" class="bg-black text-white px-3 rounded-lg flex items-center justify-center hover:bg-gray-800 active:scale-95 transition">
+                                                <ion-icon name="add" class="text-lg"></ion-icon>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Fast Add Bar -->
-                            <div class="flex gap-2 items-center bg-gray-50 p-2 rounded-2xl border border-gray-100">
-                                <div class="flex-1">
-                                     <input type="number" id="fast-code" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Item Code">
-                                </div>
-                                <div class="w-20">
-                                    <input type="number" id="fast-qty" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Qty" value="1">
-                                </div>
-                                <button id="btn-fast-add" class="bg-black text-white px-4 py-2 rounded-lg flex items-center justify-center hover:bg-gray-800 active:scale-95 transition font-bold text-sm whitespace-nowrap">
-                                    <ion-icon name="add" class="text-lg mr-1"></ion-icon> ADD
-                                </button>
-                            </div>
-                        </div>
 
                         <div class="relative">
                             <ion-icon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></ion-icon>
@@ -227,56 +224,47 @@
                 </div>
 
                 <!-- Right: Current Bill -->
-                <!-- Right: Current Bill (Mobile: Slide-up Sheet) -->
-                <!-- Toggle Button (Mobile Only) -->
-                <div id="mobile-bill-togglers" class="md:hidden fixed bottom-[80px] left-4 right-4 z-40">
-                    <button id="toggle-bill-btn" class="w-full bg-black text-white p-4 rounded-xl shadow-2xl flex justify-between items-center transition active:scale-95">
-                        <div class="flex items-center gap-3">
-                            <span class="bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full" id="mobile-cart-count">0</span>
-                            <span class="font-bold">View Bill</span>
-                        </div>
-                        <span class="font-bold text-lg" id="mobile-cart-total">₹0</span>
-                    </button>
-                </div>
-
-                <div id="current-bill-panel" class="current-bill-panel w-full md:w-96 bg-white flex flex-col h-full md:h-full shadow-xl z-50 fixed md:relative bottom-0 translate-y-full md:translate-y-0 transition-transform duration-300 rounded-t-3xl md:rounded-none">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center cursor-pointer md:cursor-auto" id="close-bill-mobile">
-                        <div>
-                            <h3 class="font-bold text-gray-800">Current Order</h3>
-                            <p class="text-xs text-gray-500" id="bill-date">--</p>
-                        </div>
-                        <div class="md:hidden bg-gray-200 rounded-full p-1">
-                            <ion-icon name="chevron-down-outline" class="text-xl"></ion-icon>
-                        </div>
+                <div id="current-bill-panel" class="current-bill-panel w-full md:w-96 bg-white flex flex-col h-full max-h-[80vh] md:h-full shadow-xl z-20" style="min-height:320px;">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50">
+                        <h3 class="font-bold text-gray-800">Current Order</h3>
+                        <p class="text-xs text-gray-500" id="bill-date">--</p>
                     </div>
                     
-                    <div id="current-bill-items" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24 md:pb-4">
+                    <div id="current-bill-items" class="flex-1 overflow-y-auto p-4 space-y-3">
                         <div class="text-center text-gray-400 mt-10">
                             <ion-icon name="cart-outline" class="text-4xl mb-2 text-gray-300"></ion-icon>
                             <p class="text-sm">Order is empty</p>
                         </div>
                     </div>
 
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3 mobile-print-area" style="background: #f9fafb;">
-                         <div class="flex justify-between items-center text-lg font-bold text-gray-900">
-                            <span>Total</span>
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 mobile-print-area transition-all duration-300" style="background: #f9fafb;">
+                        <!-- Collapsible Header: Total -->
+                         <div class="flex justify-between items-center text-lg font-bold text-gray-900 cursor-pointer mb-2" onclick="app.toggleCollapse('billing-footer-content', 'billing-footer-icon')">
+                            <div class="flex items-center gap-2">
+                                <span>Total</span>
+                                <ion-icon name="chevron-down-outline" id="billing-footer-icon" class="text-gray-500 text-lg transition-transform transform rotate-180"></ion-icon>
+                            </div>
                             <span id="bill-total-amount">₹0</span>
                         </div>
-                         <div>
-                            <input type="text" id="cust-name-opt" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" placeholder="Customer Name (Optional)">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="btn-print-kot" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
-                                <ion-icon name="restaurant-outline"></ion-icon> KOT
+                        
+                        <!-- Collapsible Content: Inputs & Buttons -->
+                         <div id="billing-footer-content" class="space-y-3 overflow-hidden transition-all duration-300">
+                            <div>
+                                <input type="text" id="cust-name-opt" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" placeholder="Customer Name (Optional)">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="btn-print-kot" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
+                                    <ion-icon name="restaurant-outline"></ion-icon> KOT
+                                </button>
+                                 <button id="btn-print-coupon" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
+                                    <ion-icon name="ticket-outline"></ion-icon> Token
+                                </button>
+                            </div>
+                            <button id="create-invoice-btn" class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition group">
+                                <ion-icon name="print-outline" class="text-xl group-hover:animate-pulse"></ion-icon>
+                                Print Bill & Close
                             </button>
-                             <button id="btn-print-coupon" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
-                                <ion-icon name="ticket-outline"></ion-icon> Token
-                            </button>
                         </div>
-                        <button id="create-invoice-btn" class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition group">
-                            <ion-icon name="print-outline" class="text-xl group-hover:animate-pulse"></ion-icon>
-                            Print Bill & Close
-                        </button>
                     </div>
                 </div>
             </section>
