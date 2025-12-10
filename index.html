@@ -60,7 +60,12 @@
         /* Print Containers */
         .print-only { display: none; }
         @media print {
-            body { background-color: white !important; color: black !important; }
+            :root { color-scheme: light; }
+            body { 
+                background-color: white !important; 
+                color: black !important; 
+                color-scheme: light;
+            }
             /* Hide all direct children of body except print containers */
             body > *:not(.print-only) { display: none !important; }
             
@@ -71,17 +76,23 @@
                 left: 0; 
                 top: 0; 
                 width: 100%; 
+                min-height: 100vh;
                 visibility: visible;
-                background-color: white !important;
-                color: black !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact; 
+                filter: none !important;
+                -webkit-filter: none !important;
             }
             /* Explicitly ensure children are visible and correct color */
             .print-only * { 
                 visibility: visible; 
-                background-color: white !important;
-                color: black !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                filter: none !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
             }
         }
         /* --- end changed code --- */
