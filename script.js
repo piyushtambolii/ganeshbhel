@@ -418,19 +418,25 @@ const app = {
     handlePrint(items, meta) {
         const style = `
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Courier New', monospace; padding: 16px; text-align: center; background: white; }
-            .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
-            .total { font-weight: bold; font-size: 1.2em; border-top: 2px solid #000; margin-top: 12px; padding-top: 8px; }
-            .header { font-size: 1.5em; font-weight: bold; margin-bottom: 8px; }
-            .date { font-size: 0.9em; color: #666; margin-bottom: 16px; }
-            .items { text-align: left; margin: 16px 0; }
-            .footer { margin-top: 20px; font-size: 0.9em; color: #666; }
-            @media print { body { padding: 8px; } }
+            html, body { font-family: 'Courier New', monospace; background: white !important; color: black !important; }
+            body { padding: 20px; text-align: center; }
+            .header { font-size: 1.6em; font-weight: bold; margin-bottom: 10px; color: black; }
+            .date { font-size: 0.85em; color: black; margin-bottom: 20px; border-bottom: 1px solid #000; padding-bottom: 10px; }
+            .items { text-align: left; margin: 20px 0; }
+            .row { display: flex; justify-content: space-between; padding: 8px 0; color: black; }
+            .row span { color: black; }
+            .row-item { border-bottom: 1px dashed #333; }
+            .total { font-weight: bold; font-size: 1.1em; border-top: 2px solid black; margin-top: 15px; padding-top: 10px; color: black; }
+            .footer { margin-top: 20px; font-size: 0.9em; color: black; }
+            @media print { 
+                * { background: white !important; color: black !important; }
+                body { padding: 10px; }
+            }
         `;
 
         const itemRows = items.map(i => `
-            <div class="row">
-                <span>${i.qty}x ${i.name}</span>
+            <div class="row row-item">
+                <span>${i.qty} x ${i.name}</span>
                 <span>₹${(i.qty * i.price).toFixed(2)}</span>
             </div>
         `).join('');
@@ -453,11 +459,6 @@ const app = {
                     <span>₹${meta.total.toFixed(2)}</span>
                 </div>
                 <div class="footer">Thank You! Visit Again</div>
-                <script>
-                    window.addEventListener('load', function() {
-                        setTimeout(function() { window.print(); }, 300);
-                    });
-                <\/script>
             </body>
             </html>
         `;
@@ -469,8 +470,12 @@ const app = {
             const printWindow = window.open(url, '_blank');
             
             if (printWindow) {
-                // Mobile will open the page; user can print via browser menu
-                setTimeout(() => { URL.revokeObjectURL(url); }, 2000);
+                // Trigger print dialog after a delay
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+                // Clean up blob URL after timeout
+                setTimeout(() => { URL.revokeObjectURL(url); }, 3000);
             } else {
                 // Fallback: if popup blocked, use iframe approach
                 this.printViaIframe(html);
@@ -488,15 +493,14 @@ const app = {
         document.body.appendChild(iframe);
         
         try {
-            iframe.contentDocument.write(html);
-            iframe.contentDocument.close();
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.write(html);
+            doc.close();
             
-            iframe.onload = function() {
-                setTimeout(() => {
-                    iframe.contentWindow.print();
-                    setTimeout(() => { document.body.removeChild(iframe); }, 1000);
-                }, 300);
-            };
+            setTimeout(() => {
+                iframe.contentWindow.print();
+                setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+            }, 500);
         } catch (e) {
             console.error('Iframe print error:', e);
             document.body.removeChild(iframe);
