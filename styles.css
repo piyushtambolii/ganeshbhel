@@ -8,8 +8,9 @@
   --card-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.6);
   --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  --nav-height: 78px; /* increased slightly to reduce bottom gap on mobile */
-  --safe-area-bottom: env(safe-area-inset-bottom);
+  --nav-height: 80px;
+  --header-height: 64px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 * {
@@ -694,5 +695,19 @@ select:focus {
   #category-filters img { width: 20px; height: 20px; }
 
   /* Avoid bottom nav overlap when printing area is present */
-  #billing-section .overflow-safe, #billing-menu-grid { padding-bottom: 8px; }
+  #billing-section .overflow-safe { 
+      padding-bottom: 20px; 
+  }
+  
+  /* Ensure main content isn't hidden behind fixed header/nav */
+  #main-layout {
+      padding-top: 0; 
+      padding-bottom: calc(var(--nav-height) + 10px);
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 380px) {
+    .billing-menu { padding-bottom: calc(var(--mobile-bill-height) + 60px); }
+    #billing-menu-grid { grid-template-columns: repeat(2, 1fr); }
 }

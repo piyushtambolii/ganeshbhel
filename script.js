@@ -305,34 +305,65 @@ const app = {
         if (search) filtered = filtered.filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.code.includes(search));
 
         const grid = document.getElementById('billing-menu-grid');
-        grid.innerHTML = filtered.map(d => `
-            <div onclick="app.addToBill('${d.code}')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition group relative overflow-hidden">
-                <div class="h-24 mb-2 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
-                    <img src="${d.image}" class="h-16 w-16 object-contain group-hover:scale-110 transition duration-300">
+        grid.innerHTML = filtered.map(d => {
+            const inBill = state.currentBill.find(b => b.code === d.code);
+            const qty = inBill ? inBill.qty : 0;
+            
+            return `
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 transition group relative overflow-hidden flex flex-col h-full">
+                <div onclick="${qty === 0 ? `app.addToBill('${d.code}')` : ''}" class="cursor-pointer">
+                    <div class="h-24 mb-2 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
+                        <img src="${d.image}" class="h-16 w-16 object-contain ${qty > 0 ? '' : 'group-hover:scale-110'} transition duration-300">
+                        ${qty > 0 ? `<div class="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center font-bold text-2xl text-orange-600 animate-in fade-in zoom-in duration-200">${qty}</div>` : ''}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-sm truncate">${d.name}</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-xs text-gray-400">#${d.code}</span>
+                            <span class="text-orange-600 font-bold">₹${d.price}</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                   <h4 class="font-bold text-gray-800 text-sm truncate">${d.name}</h4>
-                   <div class="flex justify-between items-center mt-1">
-                       <span class="text-xs text-gray-400">#${d.code}</span>
-                       <span class="text-orange-600 font-bold">₹${d.price}</span>
-                   </div>
-                </div>
-                <div class="absolute inset-0 bg-orange-500/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <ion-icon name="add" class="text-3xl text-orange-600 bg-white rounded-full p-1 shadow-sm"></ion-icon>
+                
+                <div class="mt-3 pt-2 border-t border-gray-50">
+                    ${qty === 0 ? `
+                        <button onclick="app.addToBill('${d.code}')" class="w-full bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1">
+                            <ion-icon name="add-outline"></ion-icon> Add
+                        </button>
+                    ` : `
+                        <div class="flex items-center justify-between bg-orange-600 rounded-xl p-1">
+                             <button onclick="app.updateItemQtyByCode('${d.code}', -1)" class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center active:bg-orange-700 transition">
+                                <ion-icon name="remove"></ion-icon>
+                            </button>
+                            <span class="font-bold text-white text-sm">${qty}</span>
+                            <button onclick="app.updateItemQtyByCode('${d.code}', 1)" class="w-8 h-8 rounded-lg bg-white text-orange-600 flex items-center justify-center active:bg-gray-100 transition shadow-sm">
+                                <ion-icon name="add"></ion-icon>
+                            </button>
+                        </div>
+                    `}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     },
     
     addToBill(code) {
-        const dish = state.dishes.find(d => d.code === code);
-        if(!dish) return;
-        
-        const existing = state.currentBill.find(i => i.code === code);
-        if(existing) existing.qty++;
-        else state.currentBill.push({...dish, qty: 1});
-        
-        this.renderBill();
+        this.updateItemQtyByCode(code, 1);
+    },
+
+    updateItemQtyByCode(code, change) {
+        const index = state.currentBill.findIndex(i => i.code === code);
+        if (index >= 0) {
+            this.updateBillItemQty(index, change);
+        } else if (change > 0) {
+            // New item
+             const dish = state.dishes.find(d => d.code === code);
+             if(dish) {
+                 state.currentBill.push({...dish, qty: 1});
+                 this.renderBill();
+                 // force menu re-render to show counter
+                 this.renderMenu(document.getElementById('pos-search')?.value);
+             }
+        }
     },
     
     renderBill() {
@@ -352,14 +383,26 @@ const app = {
             const itemTotal = item.price * item.qty;
             total += itemTotal;
             return `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-                    <div>
-                        <div class="font-bold text-sm text-gray-800">${item.name}</div>
-                        <div class="text-xs text-gray-400">₹${item.price} x ${item.qty}</div>
-                    </div>
-                    <div class="text-right">
+                <div class="flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-sm text-gray-800">${item.name}</div>
+                            <div class="text-xs text-gray-400">@ ₹${item.price}</div>
+                        </div>
                         <div class="font-bold text-orange-600">₹${itemTotal}</div>
-                        <button onclick="app.removeFromBill(${index})" class="text-red-400 text-xs hover:text-red-600">Remove</button>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-1">
+                        <div class="flex items-center gap-3 bg-white px-2 py-1 rounded-lg border border-gray-200">
+                             <button onclick="app.updateBillItemQty(${index}, -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition active:scale-95">
+                                ${item.qty === 1 ? '<ion-icon name="trash-outline"></ion-icon>' : '<ion-icon name="remove"></ion-icon>'}
+                            </button>
+                            <span class="font-bold w-6 text-center text-sm">${item.qty}</span>
+                            <button onclick="app.updateBillItemQty(${index}, 1)" class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200 transition active:scale-95">
+                                <ion-icon name="add"></ion-icon>
+                            </button>
+                        </div>
+                         <button onclick="app.updateBillItemQty(${index}, -${item.qty})" class="text-gray-400 text-xs hover:text-red-500 underline decoration-dotted">Remove</button>
                     </div>
                 </div>
             `;
@@ -368,9 +411,27 @@ const app = {
         document.getElementById('bill-total-amount').textContent = '₹' + total;
     },
 
-    removeFromBill(index) {
-        state.currentBill.splice(index, 1);
+    updateBillItemQty(index, change) {
+        const item = state.currentBill[index];
+        if (!item) return;
+
+        // If change is removing all, or result is <= 0
+        const newQty = item.qty + change;
+        
+        if (newQty <= 0) {
+            // Remove item
+            state.currentBill.splice(index, 1);
+        } else {
+            item.qty = newQty;
+        }
         this.renderBill();
+        // Sync menu grid in case the updated item is visible there
+        this.renderMenu(document.getElementById('pos-search')?.value);
+    },
+
+    // removeFromBill deprecated, kept for safety but functionality moved to updateBillItemQty
+    removeFromBill(index) {
+        this.updateBillItemQty(index, -9999);
     },
 
     renderHistory() {
