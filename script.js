@@ -416,23 +416,7 @@ const app = {
     },
 
     handlePrint(items, meta) {
-        const style = `
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            html, body { font-family: 'Courier New', monospace; background: white !important; color: black !important; }
-            body { padding: 20px; text-align: center; }
-            .header { font-size: 1.6em; font-weight: bold; margin-bottom: 10px; color: black; }
-            .date { font-size: 0.85em; color: black; margin-bottom: 20px; border-bottom: 1px solid #000; padding-bottom: 10px; }
-            .items { text-align: left; margin: 20px 0; }
-            .row { display: flex; justify-content: space-between; padding: 8px 0; color: black; }
-            .row span { color: black; }
-            .row-item { border-bottom: 1px dashed #333; }
-            .total { font-weight: bold; font-size: 1.1em; border-top: 2px solid black; margin-top: 15px; padding-top: 10px; color: black; }
-            .footer { margin-top: 20px; font-size: 0.9em; color: black; }
-            @media print { 
-                * { background: white !important; color: black !important; }
-                body { padding: 10px; }
-            }
-        `;
+
 
         const itemRows = items.map(i => `
             <div class="row row-item">
@@ -447,8 +431,35 @@ const app = {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta name="color-scheme" content="light">
                 <title>Receipt - ${meta.id}</title>
-                <style>${style}</style>
+                <style>
+                    :root { color-scheme: light; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    html, body { 
+                        width: 100%;
+                        background-color: #ffffff !important; 
+                        color: #000000 !important; 
+                        font-family: 'Courier New', monospace;
+                    }
+                    body { padding: 20px; text-align: center; }
+                    .header { font-size: 1.6em; font-weight: bold; margin-bottom: 10px; color: #000000 !important; }
+                    .date { font-size: 0.85em; color: #000000 !important; margin-bottom: 20px; border-bottom: 1px solid #000000; padding-bottom: 10px; }
+                    .items { text-align: left; margin: 20px 0; }
+                    .row { display: flex; justify-content: space-between; padding: 8px 0; color: #000000 !important; }
+                    .row span { color: #000000 !important; }
+                    .row-item { border-bottom: 1px dashed #333; }
+                    .total { font-weight: bold; font-size: 1.1em; border-top: 2px solid #000000; margin-top: 15px; padding-top: 10px; color: #000000 !important; }
+                    .footer { margin-top: 20px; font-size: 0.9em; color: #000000 !important; }
+                    @media print { 
+                        @page { margin: 0; }
+                        body { padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        html, body {
+                            background-color: #ffffff !important;
+                            color: #000000 !important;
+                        }
+                    }
+                </style>
             </head>
             <body>
                 <div class="header">GANESH BHEL</div>
