@@ -28,18 +28,29 @@ const app = {
 
     renderTableSelector() {
         const container = document.getElementById('table-selector');
-        if(!container) return;
+        if (!container) return;
         
-        let html = '';
-        for(let i=1; i<=15; i++) {
-            // Check status (mock check, will need real check later)
-            // For now just render buttons
-            html += `<div class="table-btn ${state.activeTable == i ? 'active' : ''}" onclick="app.selectTable(${i})">T-${i}</div>`;
-        }
+        // Show Table 1-15
+        const tables = Array.from({length: 15}, (_, i) => i + 1);
+        container.innerHTML = tables.map(t => {
+            const isActive = state.activeTable === `T-${t}`;
+            return `
+                <div class="table-btn ${isActive ? 'active' : ''} ${state.orders[`T-${t}`] && state.orders[`T-${t}`].length > 0 ? 'has-orders' : ''}" 
+                     onclick="app.selectTable('T-${t}')">
+                    T-${t}
+                </div>
+            `;
+        }).join('');
+        
         // Add "Open Orders" button
-        html += `<div class="table-btn" style="min-width:auto; padding:0 15px; background:#e0e7ff; color:#4338ca" onclick="app.showOpenOrders()">All Open</div>`;
+        container.innerHTML += `<div class="table-btn" style="min-width:auto; padding:0 15px; background:#e0e7ff; color:#4338ca" onclick="app.showOpenOrders()">All Open</div>`;
         
-        container.innerHTML = html;
+        // Update Label
+        const label = document.getElementById('active-table-label');
+        if(label) label.textContent = state.activeTable ? `Selected: ${state.activeTable}` : 'No Table Selected';
+        
+        // Auto-close selector on selection if mobile?
+        // if(window.innerWidth < 768) document.getElementById('table-selector-container')?.classList.add('hidden');
     },
 
     async selectTable(tableId) {
@@ -92,8 +103,15 @@ const app = {
         // Simple mock login check
         const user = localStorage.getItem('ganesh_user');
         if (user) {
-            state.user = JSON.parse(user);
-            this.showMain();
+            try {
+                state.user = JSON.parse(user);
+                this.showMain();
+            } catch (e) {
+                console.error('User data corrupt, logging out', e);
+                localStorage.removeItem('ganesh_user');
+                const ls = document.getElementById('login-screen');
+                if (ls) ls.classList.remove('hidden');
+            }
         } else {
             const ls = document.getElementById('login-screen');
             if (ls) ls.classList.remove('hidden');
@@ -175,6 +193,34 @@ const app = {
         
         const couponBtn = document.getElementById('btn-print-coupon');
         if (couponBtn) couponBtn.addEventListener('click', () => this.handlePrintCoupons());
+
+        // Table Toggle
+        const tableBtn = document.getElementById('toggle-tables-btn');
+        const tableContainer = document.getElementById('table-selector-container');
+        const tableIcon = document.getElementById('table-toggle-icon');
+        
+        if (tableBtn && tableContainer) {
+            tableBtn.addEventListener('click', () => {
+                tableContainer.classList.toggle('hidden');
+                if(tableIcon) tableIcon.style.transform = tableContainer.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+            });
+        }
+        
+        // Mobile Bill Toggles
+        const mobileToggle = document.getElementById('toggle-bill-btn');
+        const billPanel = document.getElementById('current-bill-panel');
+        const closeMobile = document.getElementById('close-bill-mobile');
+
+        if(mobileToggle && billPanel) {
+            mobileToggle.addEventListener('click', () => {
+                billPanel.classList.remove('translate-y-full');
+            });
+        }
+        if(closeMobile && billPanel) {
+            closeMobile.addEventListener('click', () => {
+                billPanel.classList.add('translate-y-full');
+            });
+        }
     },
 
     async handleFinalBill() {
@@ -656,6 +702,12 @@ const app = {
         }).join('');
         
         document.getElementById('bill-total-amount').textContent = '₹' + total;
+        
+        // Mobile Cart Update
+        const mobileTotal = document.getElementById('mobile-cart-total');
+        const mobileCount = document.getElementById('mobile-cart-count');
+        if(mobileTotal) mobileTotal.textContent = '₹' + total;
+        if(mobileCount) mobileCount.textContent = items.reduce((s, i) => s + i.qty, 0);
         
         // Update Print Button state?
     },

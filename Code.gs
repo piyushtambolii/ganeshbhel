@@ -9,7 +9,7 @@
 //    - Grant permissions when asked.
 // 5. Click 'Deploy' > 'New deployment'.
 //    - Select type: 'Web app'.
-//    - Description: 'v2'
+//    - Description: 'v2' 
 //    - Execute as: 'Me' (Verify this!)
 //    - Who has access: 'Anyone' (Verify this!)
 // 6. Copy the new Web App URL.
