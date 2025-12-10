@@ -377,28 +377,32 @@ const app = {
                 // Chaat
                 { code: '11', name: 'Pani Puri', price: 40, type: 'Pani Puri', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
                 { code: '12', name: 'SPDP', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046751.png' },
-                { code: '13', name: 'Dahi Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
-                { code: '14', name: 'Sev Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
-                { code: '15', name: 'Masala Puri', price: 50, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
-                { code: '16', name: 'Ragda Pattice', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/123/123284.png' },
+                // Bhel & Chaat Specials
+                { code: '10', name: 'Bhel Puri (Dry)', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '11', name: 'Sev Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '12', name: 'Pani Puri', price: 50, type: 'Pani Puri', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
+                { code: '13', name: 'Masala Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '14', name: 'Dahi Puri', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
+                { code: '15', name: 'Sukha Bhel', price: 50, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '16', name: 'Wet Bhel', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '17', name: 'Mumbai Bhel', price: 70, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '18', name: 'Kolkata Jhal Muri', price: 75, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '19', name: 'Churmuri', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '20', name: 'Ragda Pattice', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/123/123284.png' },
+                { code: '26', name: 'Aloo Tikki Chaat', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/123/123284.png' },
+                { code: '27', name: 'Samosa Chaat', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046751.png' },
+                { code: '28', name: 'Kachori Chaat', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '29', name: 'Papdi Chaat', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '30', name: 'Dahi Bhalla', price: 90, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
+                { code: '35', name: 'Tokri Basket Chaat', price: 100, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '36', name: 'Corn Bhel', price: 70, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '37', name: 'Sprouts Bhel', price: 80, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
                 
-                // Dosas
-                { code: '21', name: 'Sada Dosa', price: 60, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
-                { code: '22', name: 'Masala Dosa', price: 80, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
-                { code: '23', name: 'Mysore Masala', price: 100, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
-                { code: '24', name: 'Cut Dosa', price: 100, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
-                { code: '25', name: 'Cheese Dosa', price: 120, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
-                
-                // Sandwiches
-                { code: '31', name: 'Veg Sandwich', price: 60, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
-                { code: '32', name: 'Cheese Sandwich', price: 80, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
-                { code: '33', name: 'Toast Sandwich', price: 70, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
-                { code: '34', name: 'Grill Sandwich', price: 100, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
-                
-                // Others
-                { code: '41', name: 'Pizza', price: 150, type: 'Others', image: 'https://cdn-icons-png.flaticon.com/512/1404/1404945.png' },
-                { code: '42', name: 'Burger', price: 80, type: 'Others', image: 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png' },
-                { code: '44', name: 'Cold Coffee', price: 60, type: 'Drinks', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' }
+                // Keep some extras if needed, or overwrite.
+                // Re-adding existing Sandwiches/Dosas with shifted codes if necessary, but leaving them for now as they are distinct ranges.
+                { code: '40', name: 'Veg Sandwich', price: 60, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                { code: '41', name: 'Cheese Sandwich', price: 80, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                { code: '45', name: 'Cold Coffee', price: 60, type: 'Drinks', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' }
             ];
             this.persistItems();
         }
