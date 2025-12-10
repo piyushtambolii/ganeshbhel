@@ -416,38 +416,92 @@ const app = {
     },
 
     handlePrint(items, meta) {
-        const printWindow = window.open('', '_blank');
         const style = `
-            body { font-family: monospace; padding: 20px; text-align: center; }
-            .row { display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding: 5px 0; }
-            .total { font-weight: bold; font-size: 1.2em; border-top: 1px dashed #000; margin-top: 10px; padding-top: 10px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Courier New', monospace; padding: 16px; text-align: center; background: white; }
+            .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
+            .total { font-weight: bold; font-size: 1.2em; border-top: 2px solid #000; margin-top: 12px; padding-top: 8px; }
+            .header { font-size: 1.5em; font-weight: bold; margin-bottom: 8px; }
+            .date { font-size: 0.9em; color: #666; margin-bottom: 16px; }
+            .items { text-align: left; margin: 16px 0; }
+            .footer { margin-top: 20px; font-size: 0.9em; color: #666; }
+            @media print { body { padding: 8px; } }
         `;
+
         const itemRows = items.map(i => `
             <div class="row">
-                <span>${i.qty} x ${i.name}</span>
-                <span>${i.qty * i.price}</span>
+                <span>${i.qty}x ${i.name}</span>
+                <span>₹${(i.qty * i.price).toFixed(2)}</span>
             </div>
         `).join('');
 
-        printWindow.document.write(`
+        const html = `
+            <!DOCTYPE html>
             <html>
-            <head><style>${style}</style></head>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Receipt - ${meta.id}</title>
+                <style>${style}</style>
+            </head>
             <body>
-                <h3>GANESH BHEL</h3>
-                <p>${meta.date.toLocaleString()}</p>
-                <div style="text-align:left; margin-top:20px;">
-                    ${itemRows}
-                </div>
+                <div class="header">GANESH BHEL</div>
+                <div class="date">${meta.date.toLocaleString()}</div>
+                <div class="items">${itemRows}</div>
                 <div class="row total">
                     <span>TOTAL</span>
-                    <span>₹${meta.total}</span>
+                    <span>₹${meta.total.toFixed(2)}</span>
                 </div>
-                <p style="margin-top:20px;">Thank You!</p>
-                <script>window.print(); window.close();<\/script>
+                <div class="footer">Thank You! Visit Again</div>
+                <script>
+                    window.addEventListener('load', function() {
+                        setTimeout(function() { window.print(); }, 300);
+                    });
+                <\/script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        // Create blob and open in new window/tab
+        try {
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            
+            if (printWindow) {
+                // Mobile will open the page; user can print via browser menu
+                setTimeout(() => { URL.revokeObjectURL(url); }, 2000);
+            } else {
+                // Fallback: if popup blocked, use iframe approach
+                this.printViaIframe(html);
+            }
+        } catch (e) {
+            console.error('Print error:', e);
+            alert('Unable to print. Please try again.');
+        }
+    },
+
+    printViaIframe(html) {
+        // Fallback for popup-blocked browsers
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        try {
+            iframe.contentDocument.write(html);
+            iframe.contentDocument.close();
+            
+            iframe.onload = function() {
+                setTimeout(() => {
+                    iframe.contentWindow.print();
+                    setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+                }, 300);
+            };
+        } catch (e) {
+            console.error('Iframe print error:', e);
+            document.body.removeChild(iframe);
+            alert('Unable to print. Please try again.');
+        }
     }
 };
 
