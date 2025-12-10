@@ -75,42 +75,42 @@ const Printer = {
         
         // Generate a separate KOT-style token for each item
         const html = order.items.map((item, idx) => `
-            <div class="thermal-ticket" style="font-family: 'Courier New', Courier, monospace; font-weight: bold; padding: 10px; background: white; color: black; page-break-after: always; width: 100%; max-width: 380px; margin: 0 auto;">
+            <div class="thermal-ticket" style="font-family: 'Courier New', Courier, monospace; font-weight: bold; padding: 10px; background-color: #ffffff !important; color: #000000 !important; page-break-after: always; width: 100%; max-width: 380px; margin: 0 auto; border: 1px solid transparent;">
                 
                 <!-- Header: Category and KOT Label -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; color: #000000;">
                     <div style="font-size: 1.2em; text-transform: uppercase;">${item.type || 'OTHERS'}</div>
                     <div style="font-size: 1.2em;">KOT</div>
                 </div>
                 
                 <!-- Date Time Line -->
-                <div style="border-bottom: 1px solid #000; margin-bottom: 5px; padding-bottom: 2px;">
+                <div style="border-bottom: 1px solid #000; margin-bottom: 5px; padding-bottom: 2px; color: #000000;">
                     ${dateStr} ${timeStr}
                 </div>
                 
                 <!-- Section Line -->
-                <div style="margin-bottom: 5px;">
+                <div style="margin-bottom: 5px; color: #000000;">
                     Section : <span style="margin-left: 10px;">REGULAR</span>
                 </div>
                 
                 <!-- IDs Line -->
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px; color: #000000;">
                     <div>Kot No. : ${order.id.slice(-4)}-${idx+1}</div>
                     <div>Table No. : ${order.tableId === 'Quick' || !order.tableId ? 'Walk-in' : order.tableId}</div>
                 </div>
                 
                 <!-- Column Headers -->
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 5px; color: #000000;">
                     <div>Item Name</div>
                     <div>Quantity</div>
                 </div>
                 
                 <!-- Item Details -->
-                <div style="display: flex; justify-content: space-between; font-size: 1.1em; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1em; margin-bottom: 20px; color: #000000;">
                     <div>${item.name}</div>
                     <div style="margin-right: 15px;">${item.qty}</div>
                 </div>
-                 <hr style="border-top:1px dashed #000; margin-top:5px;">
+                 <hr style="border-top:1px dashed #000; margin-top:5px; border-color: #000;">
             </div>
         `).join('');
         
@@ -139,7 +139,7 @@ const Printer = {
             // Category Header
             itemsHtml += `
                 <tr style="font-weight:bold; font-size:1.1em; text-transform:uppercase;">
-                    <td colspan="4" style="padding-top:10px;">${cat}</td>
+                    <td colspan="4" style="padding-top:10px; color: #000;">${cat}</td>
                 </tr>
             `;
             // Items
@@ -147,10 +147,10 @@ const Printer = {
                 const amt = (item.price * item.qty).toFixed(2);
                 itemsHtml += `
                     <tr>
-                        <td style="padding:2px 0;">${item.name}</td>
-                        <td style="text-align:center;">${item.qty}</td>
-                        <td style="text-align:right;">${item.price.toFixed(2)}</td>
-                        <td style="text-align:right;">${amt}</td>
+                        <td style="padding:2px 0; color: #000;">${item.name}</td>
+                        <td style="text-align:center; color: #000;">${item.qty}</td>
+                        <td style="text-align:right; color: #000;">${item.price.toFixed(2)}</td>
+                        <td style="text-align:right; color: #000;">${amt}</td>
                     </tr>
                 `;
             });
@@ -159,12 +159,12 @@ const Printer = {
         const total = order.totals.net.toFixed(2);
 
         const html = `
-            <div class="thermal-ticket" style="font-family: 'Courier New', Courier, monospace; font-size: 14px; max-width: 380px; margin: 0 auto;">
-                <div style="border:1px solid #000; padding:10px;">
-                    <div style="text-align:center; font-weight:bold; font-size:1.4em; text-transform:uppercase;">${this.shopName}</div>
-                    <div style="text-align:center; font-size:0.9em; white-space:pre-wrap;">${this.shopAddress}</div>
+            <div class="thermal-ticket" style="font-family: 'Courier New', Courier, monospace; font-size: 14px; max-width: 380px; margin: 0 auto; background-color: #ffffff !important; color: #000000 !important;">
+                <div style="border:1px solid #000; padding:10px; border-color: #000;">
+                    <div style="text-align:center; font-weight:bold; font-size:1.4em; text-transform:uppercase; color: #000;">${this.shopName}</div>
+                    <div style="text-align:center; font-size:0.9em; white-space:pre-wrap; color: #000;">${this.shopAddress}</div>
                     
-                    <div style="border-top:1px solid #000; margin-top:10px; padding-top:5px; font-weight:bold;">
+                    <div style="border-top:1px solid #000; margin-top:10px; padding-top:5px; font-weight:bold; color: #000;">
                         <div style="display:flex; justify-content:space-between;">
                             <span>BillNo : ${order.id.slice(-6)}</span>
                             <span>Date : ${dateStr}</span>
@@ -172,17 +172,17 @@ const Printer = {
                         <div style="margin-top:2px;">Time : ${timeStr}</div>
                     </div>
                     
-                    <div style="border-top:1px solid #000; border-bottom:1px solid #000; margin:5px 0; padding:5px 0; font-weight:bold;">
+                    <div style="border-top:1px solid #000; border-bottom:1px solid #000; margin:5px 0; padding:5px 0; font-weight:bold; color: #000;">
                         Section : REGULAR
                     </div>
                     
-                    <table style="width:100%; border-collapse:collapse;">
+                    <table style="width:100%; border-collapse:collapse; color: #000;">
                         <thead>
                             <tr style="border-bottom:1px solid #000;">
-                                <th style="text-align:left; width:50%;">ITEM</th>
-                                <th style="text-align:center; width:10%;">QTY</th>
-                                <th style="text-align:right; width:20%;">RATE</th>
-                                <th style="text-align:right; width:20%;">AMT.</th>
+                                <th style="text-align:left; width:50%; color: #000;">ITEM</th>
+                                <th style="text-align:center; width:10%; color: #000;">QTY</th>
+                                <th style="text-align:right; width:20%; color: #000;">RATE</th>
+                                <th style="text-align:right; width:20%; color: #000;">AMT.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -190,12 +190,12 @@ const Printer = {
                         </tbody>
                     </table>
                     
-                    <div style="border-top:1px solid #000; margin-top:10px; padding-top:5px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.4em;">
+                    <div style="border-top:1px solid #000; margin-top:10px; padding-top:5px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.4em; color: #000;">
                         <span>Net Total :</span>
                         <span>${total}</span>
                     </div>
                     
-                    <div style="text-align:center; margin-top:15px; font-weight:bold;">
+                    <div style="text-align:center; margin-top:15px; font-weight:bold; color: #000;">
                         THANK YOU!!!<br>VISIT AGAIN
                     </div>
                 </div>
@@ -297,15 +297,32 @@ const Printer = {
         document.body.classList.add('printing-mode');
         container.style.display = 'block';
         
-        // Ensure styles are applied before print
+        // Wait for DOM update/images
         setTimeout(() => {
+            // Use onafterprint if available, fallback to timeout
+            const cleanup = () => {
+                document.body.classList.remove('printing-mode');
+                container.style.display = 'none';
+                // Do not clear innerHTML immediately to stay safe
+                cleanupListener(); 
+            };
+            
+            const cleanupListener = () => {
+                 window.removeEventListener('afterprint', cleanup);
+            };
+
+            window.addEventListener('afterprint', cleanup);
+            
             window.print();
+            
+            // Fallback for mobile where afterprint might fail or print is non-blocking
+            // We leave the content in DOM but hide it after 3 seconds
             setTimeout(() => {
                 document.body.classList.remove('printing-mode');
                 container.style.display = 'none';
-                container.innerHTML = '';
-            }, 500);
-        }, 300); // Increased delay for rendering
+            }, 3000);
+            
+        }, 500); 
     }
 };
 
