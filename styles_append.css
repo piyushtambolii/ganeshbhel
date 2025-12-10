@@ -1,0 +1,68 @@
+
+/* --- Fast Add & UI Polish --- */
+
+/* Table Selector - Pill Design */
+#table-selector {
+    gap: 12px;
+    padding: 10px 5px;
+}
+.table-btn {
+    width: 60px;
+    height: 45px;
+    border-radius: 25px; /* Pill shape */
+    font-size: 1rem;
+    font-weight: 700;
+    border: 2px solid #f0f0f0;
+    background: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+.table-btn.active {
+    background: linear-gradient(135deg, #ff9800, #e65100);
+    border-color: #e65100;
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 8px 15px rgba(230, 81, 0, 0.3);
+}
+
+/* Fast Add Inputs */
+#fast-code, #fast-qty {
+    transition: all 0.2s;
+    border: 1px solid #eee;
+}
+#fast-code:focus, #fast-qty:focus {
+    background: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.1);
+}
+
+/* Bill Item Controls */
+.qty-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f0f0;
+    padding: 2px;
+    border-radius: 8px;
+}
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #555;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.qty-btn:active { transform: scale(0.9); }
+.qty-val { font-weight: 600; min-width: 20px; text-align: center; }
+
+/* Print Polish */
+@media print {
+    /* Ensure Token page break */
+    .thermal-ticket { page-break-after: always; }
+    .thermal-ticket:last-child { page-break-after: auto; }
+}

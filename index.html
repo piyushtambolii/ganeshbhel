@@ -56,6 +56,15 @@
         body.billing-active header { height: 56px !important; min-height: 56px !important; }
         /* optional: reduce header font-size slightly when compact */
         body.billing-active header #page-title { font-size: 1rem; }
+        
+        /* Print Containers */
+        .print-only { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            body.printing-mode .print-only { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; display: block; }
+            /* Hide generic elements */
+            nav, header, #login-screen { display: none !important; }
+        }
         /* --- end changed code --- */
     </style>
 </head>
@@ -169,9 +178,32 @@
                 <div class="flex-1 flex flex-col h-full bg-gray-50 border-r border-gray-200 billing-menu">
                     <!-- Search & Filter -->
                     <div class="p-6 bg-white border-b border-gray-200 space-y-4">
+                        <!-- Compact Header: Tables + Fast Add -->
+                        <div class="mb-4">
+                            <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Select Table & Add Item</label>
+                            <div class="flex gap-3 items-center bg-gray-50 p-2 rounded-2xl border border-gray-100">
+                                <!-- Tables (Scrollable) -->
+                                <div class="flex-1 overflow-x-auto hide-scrollbar flex gap-2" id="table-selector">
+                                    <!-- Tables 1-15 injected by JS -->
+                                </div>
+                                
+                                <!-- Divider -->
+                                <div class="w-px h-8 bg-gray-300"></div>
+                                
+                                <!-- Compact Fast Add -->
+                                <div class="flex gap-1 shrink-0">
+                                    <input type="number" id="fast-code" class="w-14 px-1 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Code">
+                                    <input type="number" id="fast-qty" class="w-12 px-1 py-2 bg-white border border-gray-200 rounded-lg text-center font-bold text-sm outline-none focus:border-orange-500" placeholder="Qty" value="1">
+                                    <button id="btn-fast-add" class="bg-black text-white px-3 rounded-lg flex items-center justify-center hover:bg-gray-800 active:scale-95 transition">
+                                        <ion-icon name="add" class="text-lg"></ion-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="relative">
                             <ion-icon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></ion-icon>
-                            <input type="text" id="pos-search" class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 transition" placeholder="Search dish name or code...">
+                            <input type="text" id="pos-search" class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 transition" placeholder="Search dish name...">
                         </div>
                         <div class="flex gap-2 overflow-x-auto hide-scrollbar" id="category-filters">
                              <!-- Categories injected here -->
@@ -208,9 +240,17 @@
                          <div>
                             <input type="text" id="cust-name-opt" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none" placeholder="Customer Name (Optional)">
                         </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-print-kot" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
+                                <ion-icon name="restaurant-outline"></ion-icon> KOT
+                            </button>
+                             <button id="btn-print-coupon" class="bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300 transition">
+                                <ion-icon name="ticket-outline"></ion-icon> Token
+                            </button>
+                        </div>
                         <button id="create-invoice-btn" class="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition group">
                             <ion-icon name="print-outline" class="text-xl group-hover:animate-pulse"></ion-icon>
-                            Print Receipt
+                            Print Bill & Close
                         </button>
                     </div>
                 </div>
@@ -312,6 +352,33 @@
         })();
     </script>
 
+    <!-- Backend & Logic Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/printer.js"></script>
     <script src="script.js"></script>
+    <!-- Hidden Print Containers -->
+    <div id="print-kot" class="print-only"></div>
+    <div id="print-coupon" class="print-only"></div>
+    <div id="print-bill" class="print-only"></div>
+
+    <!-- Modals -->
+    <!-- Open Orders Modal -->
+    <div id="modal-open-orders" class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl m-4">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800">Open Orders / Tables</h3>
+                <button onclick="document.getElementById('modal-open-orders').classList.add('hidden')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
+                    <ion-icon name="close"></ion-icon>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50" id="open-orders-list">
+                <!-- Open Orders List Injected Here -->
+                <div class="text-center text-gray-400 py-10">Loading open orders...</div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

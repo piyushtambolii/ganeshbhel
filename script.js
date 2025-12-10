@@ -1,25 +1,91 @@
 /* Google Apps Script API URL - USER MUST REPLACE THIS */
 // DEPLOY YOUR CODE.GS AS WEB APP AND PASTE URL HERE
-const API_URL = 'https://script.google.com/macros/s/AKfycbwtF2t6pkIpOdwg1IwREsyUb76vxJ9cU0RoCMwQydo-d4GNeCdDIY5bzfKHSbdRIlz2/exec';
-
-// App State
+const API_URL = 'https://script.google.com/macros/s/AKfycbxOvEGma9_vdXuR6eqcEkikXu3LnyPrp2m2A5XNTTkqtLUfYMjYL2U1Sz_PFZo4OBZdNg/exec';
 const state = {
     dishes: [],
     history: [],
     dailySummaries: [],
-    currentBill: [],
-    user: null,
-    tempInvoice: null
+    currentOrder: null, // Active order object
+    activeTable: null,  // Currently selected table ID (1-15)
+    user: null
 };
 
 // Main app object
 const app = {
     init() {
+        // Initialize DB
+        DB.init();
+        
+        // Render Tables
+        this.renderTableSelector();
+        
         this.checkLogin();
         this.bindEvents();
         // Set date
         const dateEl = document.getElementById('bill-date');
         if(dateEl) dateEl.textContent = new Date().toLocaleDateString();
+    },
+
+    renderTableSelector() {
+        const container = document.getElementById('table-selector');
+        if(!container) return;
+        
+        let html = '';
+        for(let i=1; i<=15; i++) {
+            // Check status (mock check, will need real check later)
+            // For now just render buttons
+            html += `<div class="table-btn ${state.activeTable == i ? 'active' : ''}" onclick="app.selectTable(${i})">T-${i}</div>`;
+        }
+        // Add "Open Orders" button
+        html += `<div class="table-btn" style="min-width:auto; padding:0 15px; background:#e0e7ff; color:#4338ca" onclick="app.showOpenOrders()">All Open</div>`;
+        
+        container.innerHTML = html;
+    },
+
+    async selectTable(tableId) {
+        state.activeTable = tableId;
+        this.renderTableSelector(); // highlight active
+        
+        // Fetch open order for this table
+        const order = await DB.getOrderForTable(tableId);
+        if (order) {
+            state.currentOrder = order;
+        } else {
+            // New empty order state (not created in DB until item added)
+            state.currentOrder = { id: null, tableId: tableId, items: [], totals: { amount:0, net:0 } };
+        }
+        
+        this.renderBill();
+        this.renderMenu(document.getElementById('pos-search')?.value);
+        
+        // Update Table Info in UI
+        const billDate = document.getElementById('bill-date');
+        if(billDate) billDate.textContent = `Table-${tableId} | ${new Date().toLocaleTimeString()}`;
+    },
+
+    async showOpenOrders() {
+        const modal = document.getElementById('modal-open-orders');
+        const list = document.getElementById('open-orders-list');
+        modal.classList.remove('hidden');
+        
+        const orders = await DB.getOpenOrders();
+        if (orders.length === 0) {
+            list.innerHTML = '<div class="text-center text-gray-400">No open orders.</div>';
+            return;
+        }
+        
+        list.innerHTML = orders.map(o => `
+            <div class="bg-white border p-4 rounded-xl flex justify-between items-center mb-3 shadow-sm">
+                <div>
+                    <div class="font-bold text-lg">Table ${o.tableId}</div>
+                    <div class="text-sm text-gray-500">Order: ${o.id.slice(-6)} | ₹${o.totals.net}</div>
+                    <div class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleTimeString()}</div>
+                </div>
+                <button onclick="app.selectTable(${o.tableId}); document.getElementById('modal-open-orders').classList.add('hidden')" class="bg-orange-100 text-orange-600 px-4 py-2 rounded-lg font-bold">
+                    Open
+                </button>
+            </div>
+        `).join('');
     },
 
     checkLogin() {
@@ -73,6 +139,15 @@ const app = {
                 this.renderMenu(e.target.value.trim());
             });
         }
+
+        // Fast Add Bindings
+        document.getElementById('btn-fast-add')?.addEventListener('click', () => this.fastAddItem());
+        document.getElementById('fast-code')?.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') document.getElementById('fast-qty').focus(); 
+        });
+        document.getElementById('fast-qty')?.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') this.fastAddItem();
+        });
         
         // Category Filter
         const catContainer = document.getElementById('category-filters');
@@ -91,53 +166,131 @@ const app = {
             });
         }
 
-        // Create Invoice
+        // Print Actions
         const createBtn = document.getElementById('create-invoice-btn');
-        if (createBtn) createBtn.addEventListener('click', () => {
-             if (state.currentBill.length === 0) return alert('Bill is empty');
+        if (createBtn) createBtn.addEventListener('click', () => this.handleFinalBill());
+        
+        const kotBtn = document.getElementById('btn-print-kot');
+        if (kotBtn) kotBtn.addEventListener('click', () => this.handlePrintKOT());
+        
+        const couponBtn = document.getElementById('btn-print-coupon');
+        if (couponBtn) couponBtn.addEventListener('click', () => this.handlePrintCoupons());
+    },
 
-             const total = state.currentBill.reduce((s, it) => s + (it.price * it.qty), 0);
-             const custInput = document.getElementById('cust-name-opt');
-             const customer = custInput && custInput.value ? custInput.value : 'Walk-in';
-             const billNo = 'BILL' + Math.floor(Math.random() * 100000);
+    async handleFinalBill() {
+        if (!state.currentOrder || !state.currentOrder.id || state.currentOrder.items.length === 0) {
+            return alert('Please select a table and add items first.');
+        }
+        
+        // 1. Get Customer Name
+        const custInput = document.getElementById('cust-name-opt');
+        const customer = (custInput && custInput.value) || state.currentOrder.customer || 'Walk-in';
+        state.currentOrder.customer = customer; // update state
+        
+        // 2. Print First (Optimistic)
+        Printer.printBill({ ...state.currentOrder });
+        
+        // 3. Mark as CLOSED and Sync
+        state.currentOrder.status = 'CLOSED';
+        
+        // Close in Local Mock DB immediately for UI responsiveness
+        await DB.closeOrder(state.currentOrder.id, { method: 'CASH', customer });
+        
+        // Add to history state and render
+        const closedOrder = { ...state.currentOrder, date: new Date().toISOString() };
+        state.history.unshift(closedOrder);
+        this.persistInvoices();
+        this.renderHistory();
+        
+        // Sync to Sheets (Action: saveOrder with status=CLOSED)
+        if (!API_URL.includes('REPLACE')) {
+            this.apiCall({ 
+                action: 'saveOrder', 
+                id: state.currentOrder.id, 
+                tableId: state.currentOrder.tableId,
+                status: 'CLOSED',
+                total: state.currentOrder.totals.net, 
+                customer: customer, 
+                items: JSON.stringify(state.currentOrder.items) 
+            }).catch(e => console.warn('Close sync failed', e));
+        }
 
-             const invoiceData = {
-                 action: 'createInvoice',
-                 id: billNo,
-                 total: total,
-                 customerName: customer,
-                 items: JSON.stringify(state.currentBill), // Backend expects stringified JSON
-             };
+        // 4. Reset Table State
+        state.currentOrder = { id: null, tableId: state.activeTable, items: [], totals: {amount:0, net:0}, customer: '' };
+        this.renderBill();
+        if(custInput) custInput.value = '';
+        saveEndOfDaySummary();
+    },
 
-             // 1. Direct Print
-             this.handlePrint(state.currentBill, { id: billNo, total, customer, date: new Date() });
+    handlePrintKOT() {
+        if (!state.currentOrder || state.currentOrder.items.length === 0) return alert('Order is empty');
+        Printer.printKOT(state.currentOrder);
+        // Save order as OPEN
+        this.saveCurrentOrder();
+    },
 
-             // 2. Save locally (persist immediately) so history is permanent even offline
-             const invoiceObj = { id: billNo, date: new Date().toISOString(), total, customer, items: invoiceData.items };
-             state.history.unshift(invoiceObj);
-             this.persistInvoices();
-             this.renderHistory();
+    handlePrintCoupons() {
+        if (!state.currentOrder || state.currentOrder.items.length === 0) return alert('Order is empty');
+        Printer.printCoupons(state.currentOrder);
+        // Capture Customer Info if present
+        const custInput = document.getElementById('cust-name-opt');
+        if (custInput && custInput.value) state.currentOrder.customer = custInput.value;
+        this.saveCurrentOrder();
+    },
 
-             // After save, clear bill and reset for next customer
-             state.currentBill = [];
-             this.renderBill();
-             if(custInput) custInput.value = '';
-             // Focus on billing section for next customer
-             this.navTo('billing');
-             // Optionally, focus the search box for speed
-             setTimeout(() => {
-                 document.getElementById('pos-search')?.focus();
-             }, 200);
+    fastAddItem() {
+        const codeInput = document.getElementById('fast-code');
+        const qtyInput = document.getElementById('fast-qty');
+        const code = codeInput.value.trim();
+        const qty = parseInt(qtyInput.value) || 1;
+        
+        if (!code) return;
+        
+        const item = state.dishes.find(d => d.code === code);
+        if (item) {
+            this.addItemToOrder(item, qty);
+            // Reset for next
+            codeInput.value = '';
+            qtyInput.value = '1';
+            codeInput.focus();
+        } else {
+            alert('Item code not found!');
+            codeInput.select();
+        }
+    },
 
-            // 3. Optionally send to backend, but do not rely on it for local persistence
-            if (!API_URL.includes('REPLACE')) {
-                 this.apiCall(invoiceData).then(res => {
-                     console.log('Saved to Sheet', res);
-                 }).catch(err => {
-                     console.warn('Remote save failed (invoice persisted locally)', err);
-                 });
-             }
-        });
+    async saveCurrentOrder() {
+        if (!state.activeTable) return alert('Select a table first');
+        if (state.currentOrder.items.length === 0) return;
+        
+        // Ensure ID
+        if (!state.currentOrder.id) {
+            state.currentOrder.id = 'ORD-' + Date.now().toString().slice(-6);
+        }
+        
+        const custInput = document.getElementById('cust-name-opt');
+        const customer = (custInput ? custInput.value : '') || state.currentOrder.customer || '';
+        state.currentOrder.customer = customer;
+
+        // Save Local (for reliability)
+        // Note: DB.createOrder/updateOrder logic mostly handles local array, 
+        // we essentially just need validity here.
+        
+        // Sync to Sheets (Upsert as OPEN)
+        if (!API_URL.includes('REPLACE')) {
+            // Non-blocking sync
+            this.apiCall({
+                 action: 'saveOrder',
+                 id: state.currentOrder.id,
+                 tableId: state.activeTable,
+                 customer: customer,
+                 status: 'OPEN',
+                 total: state.currentOrder.totals.net,
+                 items: JSON.stringify(state.currentOrder.items)
+            }).then(res => console.log('Cloud Saved:', res)).catch(e => console.error('Cloud Save Error', e));
+        } else {
+             console.log('Mock Save (No API)');
+        }
     },
 
     showMain() {
@@ -163,7 +316,7 @@ const app = {
     },
 
     async loadData() {
-        // Load local persistence first (invoices and daily summaries)
+        // Load local persistence first
         try {
             const savedInv = localStorage.getItem('ganesh_invoices');
             if (savedInv) state.history = JSON.parse(savedInv);
@@ -173,28 +326,99 @@ const app = {
             if (savedDaily) state.dailySummaries = JSON.parse(savedDaily);
         } catch (e) { state.dailySummaries = state.dailySummaries || []; }
 
+        // Load cached items
+        const cachedItems = localStorage.getItem('ganesh_items');
+        if (cachedItems) {
+            try { state.dishes = JSON.parse(cachedItems); } catch (e) {}
+        }
+        
+        if (state.dishes.length === 0) {
+             console.log('No cache, loading default items...');
+             // Default Items (Full Menu)
+             state.dishes = [
+                // Bhel
+                { code: '1', name: 'Bhel Puri', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '2', name: 'Matki Bhel', price: 70, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '3', name: 'Sukha Bhel', price: 50, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '4', name: 'Oli Bhel', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '5', name: 'Jain Bhel', price: 60, type: 'Bhel', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                
+                // Chaat
+                { code: '11', name: 'Pani Puri', price: 40, type: 'Pani Puri', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
+                { code: '12', name: 'SPDP', price: 80, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046751.png' },
+                { code: '13', name: 'Dahi Puri', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046771.png' },
+                { code: '14', name: 'Sev Puri', price: 60, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '15', name: 'Masala Puri', price: 50, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046755.png' },
+                { code: '16', name: 'Ragda Pattice', price: 70, type: 'Chaat', image: 'https://cdn-icons-png.flaticon.com/512/123/123284.png' },
+                
+                // Dosas
+                { code: '21', name: 'Sada Dosa', price: 60, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
+                { code: '22', name: 'Masala Dosa', price: 80, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
+                { code: '23', name: 'Mysore Masala', price: 100, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
+                { code: '24', name: 'Cut Dosa', price: 100, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
+                { code: '25', name: 'Cheese Dosa', price: 120, type: 'Dosas', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046765.png' },
+                
+                // Sandwiches
+                { code: '31', name: 'Veg Sandwich', price: 60, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                { code: '32', name: 'Cheese Sandwich', price: 80, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                { code: '33', name: 'Toast Sandwich', price: 70, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                { code: '34', name: 'Grill Sandwich', price: 100, type: 'Sandwiches', image: 'https://cdn-icons-png.flaticon.com/512/1046/1046759.png' },
+                
+                // Others
+                { code: '41', name: 'Pizza', price: 150, type: 'Others', image: 'https://cdn-icons-png.flaticon.com/512/1404/1404945.png' },
+                { code: '42', name: 'Burger', price: 80, type: 'Others', image: 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png' },
+                { code: '44', name: 'Cold Coffee', price: 60, type: 'Drinks', image: 'https://cdn-icons-png.flaticon.com/512/924/924514.png' }
+            ];
+            this.persistItems();
+        }
+        
+        this.renderUI();
+
         if (API_URL.includes('REPLACE')) {
-            console.warn('Using Mock Data for dishes. Configure API_URL in script.js');
-            this.mockData(true);
+            console.warn('API URL not set. Using offline/mock mode.');
             return;
         }
 
         try {
-            // Fetch remote history (optional) but do not overwrite local persistence
-            const res = await fetch(`${API_URL}?action=getHistory`);
-            const data = await res.json();
-            // merge remote data into local history but keep local first (avoid duplicates)
-            if (Array.isArray(data)) {
-                const existingIds = new Set((state.history || []).map(h => h.id));
-                data.forEach(d => { if (!existingIds.has(d.id)) state.history.unshift(d); });
+            // Fetch live items
+            console.log('Fetching items from Sheet...');
+            const res = await fetch(`${API_URL}?action=getItems`);
+            const items = await res.json();
+            
+            if (Array.isArray(items) && items.length > 0) {
+                state.dishes = items;
+                this.persistItems();
+                this.renderUI();
+                console.log('Items updated from Sheet');
             }
-
-            // Still verify dishes from mock or fetching
-            this.mockData(true); // Populate dishes locally for now
-            this.renderHistory();
+            
+            // Fetch remote history
+            const histRes = await fetch(`${API_URL}?action=getHistory`);
+            const histData = await histRes.json();
+            if (Array.isArray(histData)) {
+                // Merge history
+                const existingIds = new Set((state.history || []).map(h => h.id));
+                histData.forEach(d => { if (!existingIds.has(d.id)) state.history.push(d); });
+                state.history.sort((a,b) => new Date(b.date) - new Date(a.date));
+                this.persistInvoices();
+                this.renderHistory();
+            }
+            
+            // Fetch Open Orders (Sync Active State)
+            const openRes = await fetch(`${API_URL}?action=getOpenOrders`);
+            const openData = await openRes.json();
+            if (Array.isArray(openData) && openData.length > 0) {
+                 console.log('Synced Open Orders:', openData.length);
+                 // hydrate local DB with cloud open orders
+                 // We need to bypass DB methods slightly or assume DB is ephemeral?
+                 // Let's just update the DB._orders mock array if we are in mock mode, 
+                 // or ideally DB should be the one fetching. 
+                 // For now, let's just make sure they are discoverable via showOpenOrders
+                 // Ideally we should merge them into DB.
+                 DB.mergeCloudOrders(openData);
+            }
         } catch (e) {
-            console.error('Data load error', e);
-            this.mockData();
+            console.error('Data sync error', e);
         }
     },
     
@@ -305,13 +529,16 @@ const app = {
         if (search) filtered = filtered.filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.code.includes(search));
 
         const grid = document.getElementById('billing-menu-grid');
+        // Use currentOrder.items or [] if no table selected
+        const currentItems = state.currentOrder ? state.currentOrder.items : [];
+        
         grid.innerHTML = filtered.map(d => {
-            const inBill = state.currentBill.find(b => b.code === d.code);
+            const inBill = currentItems.find(b => b.code === d.code);
             const qty = inBill ? inBill.qty : 0;
             
             return `
             <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 transition group relative overflow-hidden flex flex-col h-full">
-                <div onclick="${qty === 0 ? `app.addToBill('${d.code}')` : ''}" class="cursor-pointer">
+                <div onclick="${qty === 0 ? `app.updateItemQtyByCode('${d.code}', 1)` : ''}" class="cursor-pointer">
                     <div class="h-24 mb-2 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
                         <img src="${d.image}" class="h-16 w-16 object-contain ${qty > 0 ? '' : 'group-hover:scale-110'} transition duration-300">
                         ${qty > 0 ? `<div class="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center font-bold text-2xl text-orange-600 animate-in fade-in zoom-in duration-200">${qty}</div>` : ''}
@@ -327,7 +554,7 @@ const app = {
                 
                 <div class="mt-3 pt-2 border-t border-gray-50">
                     ${qty === 0 ? `
-                        <button onclick="app.addToBill('${d.code}')" class="w-full bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1">
+                        <button onclick="app.updateItemQtyByCode('${d.code}', 1)" class="w-full bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1">
                             <ion-icon name="add-outline"></ion-icon> Add
                         </button>
                     ` : `
@@ -346,40 +573,61 @@ const app = {
         `}).join('');
     },
     
-    addToBill(code) {
-        this.updateItemQtyByCode(code, 1);
-    },
-
-    updateItemQtyByCode(code, change) {
-        const index = state.currentBill.findIndex(i => i.code === code);
-        if (index >= 0) {
-            this.updateBillItemQty(index, change);
-        } else if (change > 0) {
-            // New item
-             const dish = state.dishes.find(d => d.code === code);
-             if(dish) {
-                 state.currentBill.push({...dish, qty: 1});
-                 this.renderBill();
-                 // force menu re-render to show counter
-                 this.renderMenu(document.getElementById('pos-search')?.value);
-             }
+    async updateItemQtyByCode(code, change) {
+        if (!state.activeTable) {
+            alert('Please select a table first!');
+            return;
         }
+        
+        let items = state.currentOrder.items || [];
+        const index = items.findIndex(i => i.code === code);
+        
+        if (index >= 0) {
+            const newQty = items[index].qty + change;
+            if (newQty <= 0) items.splice(index, 1);
+            else items[index].qty = newQty;
+        } else if (change > 0) {
+             const dish = state.dishes.find(d => d.code === code);
+             if(dish) items.push({...dish, qty: 1});
+        }
+        
+        state.currentOrder.items = items;
+        // Recalculate totals local
+        const net = items.reduce((s, i) => s + (i.price * i.qty), 0);
+        state.currentOrder.totals = { amount: net, net: net };
+        
+        // Save to DB immediately (debounced ideally, but direct for now)
+        await this.saveCurrentOrder();
+        
+        this.renderBill();
+        this.renderMenu(document.getElementById('pos-search')?.value);
     },
+    
+    // Removed old addToBill, use updateItemQtyByCode
     
     renderBill() {
         const container = document.getElementById('current-bill-items');
-        if (state.currentBill.length === 0) {
+        // Check if table selected
+        if (!state.activeTable) {
+             container.innerHTML = `<div class="text-center text-gray-400 mt-10">Select a Table to start ordering</div>`;
+             document.getElementById('bill-total-amount').textContent = '₹0';
+             return;
+        }
+        
+        const items = state.currentOrder ? state.currentOrder.items : [];
+
+        if (items.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-gray-400 mt-10">
                     <ion-icon name="cart-outline" class="text-4xl mb-2 text-gray-300"></ion-icon>
-                    <p class="text-sm">Order is empty</p>
+                    <p class="text-sm">Empty Order (Table ${state.activeTable})</p>
                 </div>`;
             document.getElementById('bill-total-amount').textContent = '₹0';
             return;
         }
 
         let total = 0;
-        container.innerHTML = state.currentBill.map((item, index) => {
+        container.innerHTML = items.map((item, index) => {
             const itemTotal = item.price * item.qty;
             total += itemTotal;
             return `
@@ -394,44 +642,28 @@ const app = {
                     
                     <div class="flex justify-between items-center mt-1">
                         <div class="flex items-center gap-3 bg-white px-2 py-1 rounded-lg border border-gray-200">
-                             <button onclick="app.updateBillItemQty(${index}, -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition active:scale-95">
+                             <button onclick="app.updateItemQtyByCode('${item.code}', -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition active:scale-95">
                                 ${item.qty === 1 ? '<ion-icon name="trash-outline"></ion-icon>' : '<ion-icon name="remove"></ion-icon>'}
                             </button>
                             <span class="font-bold w-6 text-center text-sm">${item.qty}</span>
-                            <button onclick="app.updateBillItemQty(${index}, 1)" class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200 transition active:scale-95">
+                            <button onclick="app.updateItemQtyByCode('${item.code}', 1)" class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200 transition active:scale-95">
                                 <ion-icon name="add"></ion-icon>
                             </button>
                         </div>
-                         <button onclick="app.updateBillItemQty(${index}, -${item.qty})" class="text-gray-400 text-xs hover:text-red-500 underline decoration-dotted">Remove</button>
                     </div>
                 </div>
             `;
         }).join('');
         
         document.getElementById('bill-total-amount').textContent = '₹' + total;
-    },
-
-    updateBillItemQty(index, change) {
-        const item = state.currentBill[index];
-        if (!item) return;
-
-        // If change is removing all, or result is <= 0
-        const newQty = item.qty + change;
         
-        if (newQty <= 0) {
-            // Remove item
-            state.currentBill.splice(index, 1);
-        } else {
-            item.qty = newQty;
-        }
-        this.renderBill();
-        // Sync menu grid in case the updated item is visible there
-        this.renderMenu(document.getElementById('pos-search')?.value);
+        // Update Print Button state?
     },
-
-    // removeFromBill deprecated, kept for safety but functionality moved to updateBillItemQty
+    
+    // Removed old updateBillItemQty, logic is now centralized in updateItemQtyByCode
+    
     removeFromBill(index) {
-        this.updateBillItemQty(index, -9999);
+        // Deprecated
     },
 
     renderHistory() {
@@ -476,109 +708,8 @@ const app = {
         `;
     },
 
-    handlePrint(items, meta) {
+    // Old print logic removed. Using Printer.js now.
 
-
-        const itemRows = items.map(i => `
-            <div class="row row-item">
-                <span>${i.qty} x ${i.name}</span>
-                <span>₹${(i.qty * i.price).toFixed(2)}</span>
-            </div>
-        `).join('');
-
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <meta name="color-scheme" content="light">
-                <title>Receipt - ${meta.id}</title>
-                <style>
-                    :root { color-scheme: light; }
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    html, body { 
-                        width: 100%;
-                        background-color: #ffffff !important; 
-                        color: #000000 !important; 
-                        font-family: 'Courier New', monospace;
-                    }
-                    body { padding: 20px; text-align: center; }
-                    .header { font-size: 1.6em; font-weight: bold; margin-bottom: 10px; color: #000000 !important; }
-                    .date { font-size: 0.85em; color: #000000 !important; margin-bottom: 20px; border-bottom: 1px solid #000000; padding-bottom: 10px; }
-                    .items { text-align: left; margin: 20px 0; }
-                    .row { display: flex; justify-content: space-between; padding: 8px 0; color: #000000 !important; }
-                    .row span { color: #000000 !important; }
-                    .row-item { border-bottom: 1px dashed #333; }
-                    .total { font-weight: bold; font-size: 1.1em; border-top: 2px solid #000000; margin-top: 15px; padding-top: 10px; color: #000000 !important; }
-                    .footer { margin-top: 20px; font-size: 0.9em; color: #000000 !important; }
-                    @media print { 
-                        @page { margin: 0; }
-                        body { padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                        html, body {
-                            background-color: #ffffff !important;
-                            color: #000000 !important;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">GANESH BHEL</div>
-                <div class="date">${meta.date.toLocaleString()}</div>
-                <div class="items">${itemRows}</div>
-                <div class="row total">
-                    <span>TOTAL</span>
-                    <span>₹${meta.total.toFixed(2)}</span>
-                </div>
-                <div class="footer">Thank You! Visit Again</div>
-            </body>
-            </html>
-        `;
-
-        // Create blob and open in new window/tab
-        try {
-            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            
-            if (printWindow) {
-                // Trigger print dialog after a delay
-                setTimeout(() => {
-                    printWindow.print();
-                }, 500);
-                // Clean up blob URL after timeout
-                setTimeout(() => { URL.revokeObjectURL(url); }, 3000);
-            } else {
-                // Fallback: if popup blocked, use iframe approach
-                this.printViaIframe(html);
-            }
-        } catch (e) {
-            console.error('Print error:', e);
-            alert('Unable to print. Please try again.');
-        }
-    },
-
-    printViaIframe(html) {
-        // Fallback for popup-blocked browsers
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        try {
-            const doc = iframe.contentDocument || iframe.contentWindow.document;
-            doc.write(html);
-            doc.close();
-            
-            setTimeout(() => {
-                iframe.contentWindow.print();
-                setTimeout(() => { document.body.removeChild(iframe); }, 1000);
-            }, 500);
-        } catch (e) {
-            console.error('Iframe print error:', e);
-            document.body.removeChild(iframe);
-            alert('Unable to print. Please try again.');
-        }
-    }
 };
 
 window.addEventListener('DOMContentLoaded', () => app.init());
