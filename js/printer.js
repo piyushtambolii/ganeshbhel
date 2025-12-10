@@ -64,19 +64,53 @@ const Printer = {
         this.executePrint(container, html);
     },
 
-    // 2. Token / Coupon
+    // 2. Token / KOT - Matches User Screenshot
     printCoupons(order) {
-        // Reuse KOT logic or separate? User asked for Token. 
-        // Let's make a simple Token per item.
         const container = document.getElementById('print-coupon');
         if (!container) return;
         
-        const html = order.items.map(item => `
-            <div class="thermal-ticket" style="page-break-after: always; text-align:center; padding:10px;">
-                <h3 style="margin:0;">TOKEN</h3>
-                <div style="font-size:2em; font-weight:bold; margin:10px 0;">${item.qty}</div>
-                <div style="font-size:1.5em; font-weight:bold;">${item.name}</div>
-                <div style="margin-top:10px;">Table: ${order.tableId}</div>
+        const date = new Date();
+        const dateStr = date.toLocaleDateString('en-GB').replace(/\//g, '-');
+        const timeStr = date.toLocaleTimeString('en-GB', { hour12: false }); // 12:15:33
+        
+        // Generate a separate KOT-style token for each item
+        const html = order.items.map((item, idx) => `
+            <div class="thermal-ticket" style="font-family: 'Courier New', Courier, monospace; font-weight: bold; padding: 10px; background: white; color: black; page-break-after: always; width: 100%; max-width: 380px; margin: 0 auto;">
+                
+                <!-- Header: Category and KOT Label -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                    <div style="font-size: 1.2em; text-transform: uppercase;">${item.type || 'OTHERS'}</div>
+                    <div style="font-size: 1.2em;">KOT</div>
+                </div>
+                
+                <!-- Date Time Line -->
+                <div style="border-bottom: 1px solid #000; margin-bottom: 5px; padding-bottom: 2px;">
+                    ${dateStr} ${timeStr}
+                </div>
+                
+                <!-- Section Line -->
+                <div style="margin-bottom: 5px;">
+                    Section : <span style="margin-left: 10px;">REGULAR</span>
+                </div>
+                
+                <!-- IDs Line -->
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
+                    <div>Kot No. : ${order.id.slice(-4)}-${idx+1}</div>
+                    <div>Table No. : ${order.tableId === 'Quick' || !order.tableId ? 'Walk-in' : order.tableId}</div>
+                </div>
+                
+                <!-- Column Headers -->
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 5px;">
+                    <div>Item Name</div>
+                    <div>Quantity</div>
+                </div>
+                
+                <!-- Item Details -->
+                <div style="display: flex; justify-content: space-between; font-size: 1.1em; margin-bottom: 20px;">
+                    <div>${item.name}</div>
+                    <div style="margin-right: 15px;">${item.qty}</div>
+                </div>
+                 <hr style="border-top:1px dashed #000; margin-top:5px;">
             </div>
         `).join('');
         

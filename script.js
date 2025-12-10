@@ -60,7 +60,10 @@ const app = {
         
         // Update Table Info in UI
         const billDate = document.getElementById('bill-date');
-        if(billDate) billDate.textContent = `Table-${tableId} | ${new Date().toLocaleTimeString()}`;
+        if(billDate) {
+            const label = tableId === 'Quick' ? 'Quick Order (Walk-in)' : `Table-${tableId}`;
+            billDate.textContent = `${label} | ${new Date().toLocaleTimeString()}`;
+        }
     },
 
     async showOpenOrders() {
@@ -170,8 +173,7 @@ const app = {
         const createBtn = document.getElementById('create-invoice-btn');
         if (createBtn) createBtn.addEventListener('click', () => this.handleFinalBill());
         
-        const kotBtn = document.getElementById('btn-print-kot');
-        if (kotBtn) kotBtn.addEventListener('click', () => this.handlePrintKOT());
+        // Removed KOT button listener
         
         const couponBtn = document.getElementById('btn-print-coupon');
         if (couponBtn) couponBtn.addEventListener('click', () => this.handlePrintCoupons());
@@ -604,8 +606,8 @@ const app = {
     
     async updateItemQtyByCode(code, change) {
         if (!state.activeTable) {
-            alert('Please select a table first!');
-            return;
+            // Auto-select "Quick" table/order if none selected
+            await this.selectTable('Quick');
         }
         
         let items = state.currentOrder.items || [];
