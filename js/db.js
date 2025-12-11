@@ -62,6 +62,24 @@ const DB = {
         }
     },
 
+    // Upsert (Create or Update) an order
+    async upsertOrder(order) {
+        if (!order || !order.id) return;
+        
+        if (this.useFirebase) {
+             await this.db.collection('orders').doc(order.id).set(order, { merge: true });
+        } else {
+             const orders = this.getMockOrders();
+             const idx = orders.findIndex(o => o.id === order.id);
+             if (idx >= 0) {
+                 orders[idx] = order;
+             } else {
+                 orders.push(order);
+             }
+             this.saveMockOrders(orders);
+        }
+    },
+
     // Update an order (items, flags, etc)
     async updateOrder(orderId, updates) {
         if (this.useFirebase) {

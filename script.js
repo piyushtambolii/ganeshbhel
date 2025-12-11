@@ -1,6 +1,6 @@
 /* Google Apps Script API URL - USER MUST REPLACE THIS */
 // DEPLOY YOUR CODE.GexecS AS WEB APP AND PASTE URL HERE
-const API_URL = 'https://script.google.com/macros/s/AKfycbwqyHNrvHtCPu_MnFLpxSVYJxWJv3i7JnUstLsDZoTH-5aBZyamxqCEOei0q7O81WdO/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyctHBJ_TtiSu_ncEnf6lqGCHB3_D9ZnzGAdn-r6zGUCzJyca_IqqarXH1Sa2YnqCRd/exec';
 const state = {
     dishes: [],
     history: [],
@@ -288,8 +288,7 @@ const app = {
         state.currentOrder.customer = customer;
 
         // Save Local (for reliability)
-        // Note: DB.createOrder/updateOrder logic mostly handles local array, 
-        // we essentially just need validity here.
+        await DB.upsertOrder(state.currentOrder);
         
         // Sync to Sheets (Upsert as OPEN)
         if (!API_URL.includes('REPLACE')) {
@@ -747,64 +746,99 @@ const app = {
         // 1. Fetch Open Orders
         let openOrders = [];
         try { 
-            // Fetch from local DB which has the latest specific open orders
             openOrders = await DB.getOpenOrders(); 
         } catch(e){ console.warn(e); }
 
-        const openOrdersHtml = openOrders.length > 0 ? openOrders.map(o => `
-            <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200 flex justify-between items-center mb-3 cursor-pointer hover:bg-yellow-100 transition shadow-sm" onclick="app.selectTable('${o.tableId}'); app.navTo('billing');">
-                <div>
-                    <div class="flex items-center gap-2">
-                         <span class="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">Running</span>
-                         <span class="font-bold text-gray-900">Table-${o.tableId}</span>
+        // 2. Fetch History (Closed)
+        // Ensure we rely on state.history which is loaded/synced
+        const closedOrders = (state.history || []).slice().filter(o => o.status !== 'OPEN'); 
+
+        let html = '';
+
+        // --- PENDING BILLS SECTION ---
+        if (openOrders.length > 0) {
+            html += `
+                <div class="mb-6">
+                    <h3 class="text-orange-600 font-bold mb-3 flex items-center gap-2">
+                        <ion-icon name="hourglass-outline"></ion-icon> Pending Bills / Open Orders
+                    </h3>
+                    <div class="space-y-3">
+                        ${openOrders.map(o => `
+                            <div class="bg-orange-50 p-4 rounded-xl border border-orange-200 flex justify-between items-center shadow-sm cursor-pointer hover:bg-orange-100 transition" onclick="app.selectTable('${o.tableId}'); app.navTo('billing');">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                         <span class="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Running</span>
+                                         <span class="font-bold text-gray-900 text-lg">Table-${o.tableId}</span>
+                                    </div>
+                                    <div class="text-sm text-gray-600 font-medium">Order #${(o.id||'').slice(-4)} <span class="mx-1">•</span> ₹${o.totals.net}</div>
+                                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                        <ion-icon name="time-outline"></ion-icon> ${new Date(o.createdAt || Date.now()).toLocaleTimeString()}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end gap-2">
+                                    <div class="text-2xl font-bold text-gray-800">₹${o.totals.net}</div>
+                                    <button class="bg-white text-orange-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-orange-200 shadow-sm flex items-center gap-1 hover:bg-orange-600 hover:text-white transition">
+                                        Resume Bill <ion-icon name="arrow-forward"></ion-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div class="text-sm text-gray-600 mt-1 font-medium">Order #${(o.id||'').slice(-4)} | ₹${o.totals.net}</div>
-                    <div class="text-xs text-gray-400 mt-0.5">${new Date(o.createdAt || Date.now()).toLocaleTimeString()}</div>
                 </div>
-                <div class="text-orange-600 font-bold flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-yellow-100 shadow-sm">
-                    Open <ion-icon name="arrow-forward"></ion-icon>
-                </div>
-            </div>
-        `).join('') : '';
+                <hr class="border-dashed border-gray-300 my-6">
+            `;
+        }
+
+        // --- PAST INVOICES SECTION ---
+        html += `<h3 class="text-gray-800 font-bold mb-3 flex items-center gap-2"><ion-icon name="checkmark-done-circle-outline"></ion-icon> Past Invoices</h3>`;
 
         // Render daily summaries first
-        const summaries = (state.dailySummaries || []).slice().reverse(); // show recent first
-        const summaryHtml = summaries.map(s => `
-            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-3">
-                <div class="flex justify-between items-center">
+        const summaries = (state.dailySummaries || []).slice().reverse(); 
+        if(summaries.length > 0) {
+             // html += ... (keep summaries if needed, or simplify? keeping for now)
+             html += summaries.map(s => `
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-3 opacity-90 hover:opacity-100">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-gray-800">${new Date(s.date).toLocaleDateString()}</div>
+                            <div class="text-xs text-gray-500">${s.invoiceCount || 0} bills</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-lg text-green-600">₹${s.totalSales}</div>
+                            <div class="text-xs text-gray-500">${s.totalDishes} dishes</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render recent closed invoices
+        if (closedOrders.length === 0 && summaries.length === 0) {
+            html += `<div class="text-center text-gray-400 py-10">No history found.</div>`;
+        } else {
+            // Show last 20?
+            const recent = closedOrders.slice(0, 50); 
+            html += recent.map(h => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center mb-2">
                     <div>
-                        <div class="font-bold text-gray-800">${new Date(s.date).toLocaleDateString()}</div>
-                        <div class="text-xs text-gray-500">${s.invoiceCount || 0} bills</div>
+                        <div class="font-bold text-gray-800 flex items-center gap-2">
+                            Bill #${(h.id||'').slice(-6)}
+                            <span class="text-[10px] bg-green-100 text-green-700 px-1.5 rounded border border-green-200">PAID</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-0.5">${new Date(h.date).toLocaleString()}</div>
                     </div>
                     <div class="text-right">
-                        <div class="font-bold text-lg text-green-600">₹${s.totalSales}</div>
-                        <div class="text-xs text-gray-500">${s.totalDishes} dishes</div>
+                        <div class="font-bold text-lg text-green-600">₹${h.total}</div>
+                        <div class="text-xs text-gray-500">${h.customer || 'Walk-in'}</div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
 
-        // Render all invoices (most recent first)
-        const invoices = (state.history || []).slice().map(h => h).reverse();
-        const invoicesHtml = invoices.map(h => `
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center mb-2">
-                <div>
-                    <div class="font-bold text-gray-800">Bill #${(h.id||'').slice(-6)}</div>
-                    <div class="text-xs text-gray-400">${new Date(h.date).toLocaleString()}</div>
-                </div>
-                <div class="text-right">
-                    <div class="font-bold text-lg text-green-600">₹${h.total}</div>
-                    <div class="text-xs text-gray-500">${h.customer || 'Walk-in'}</div>
-                </div>
-            </div>
-        `).join('');
-
-        list.innerHTML = `
-            ${openOrders.length ? `<div class="mb-6"><h3 class="text-lg font-bold mb-3 text-gray-800 border-b pb-2">Active Orders</h3>${openOrdersHtml}</div>` : ''}
-            <div class="mb-4"><h3 class="text-lg font-bold mb-3 text-gray-800">Daily Summaries</h3>${summaryHtml || '<div class="text-sm text-gray-500">No daily summaries yet.</div>'}</div>
-            <div class="mt-6"><h3 class="text-lg font-bold mb-3 text-gray-800">All Bills</h3>${invoicesHtml || '<div class="text-sm text-gray-500">No bills yet.</div>'}</div>
-        `;
+        list.innerHTML = html;
     },
+
+
 
     // Old print logic removed. Using Printer.js now.
 
